@@ -371,10 +371,6 @@ class _Statistics2ScreenState extends State<Statistics2Screen> with SingleTicker
         currentQuestion++;
         selectedAnswer = null;
         showResult = false;
-        shuffledConcepts = List.from(concepts)..shuffle();
-        for (var concept in shuffledConcepts) {
-          concept.options.shuffle();
-        }
         _animationController.reset();
         _animationController.forward();
         _speakText('Great job! Let\'s try another one!');

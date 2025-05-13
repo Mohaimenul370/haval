@@ -557,18 +557,64 @@ class _PositionsScreenState extends State<PositionsScreen> {
           runSpacing: 10,
           alignment: WrapAlignment.center,
           children: options.map((position) {
-            return ElevatedButton(
-              onPressed: showResult ? null : () => _checkAnswer(position.name),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: showResult
-                    ? (position.name == selectedAnswer
-                        ? (isCorrect ? Colors.green : Colors.red)
-                        : (position.name == positions[currentQuestion].name
-                            ? Colors.green
-                            : null))
-                    : null,
+            final isSelected = selectedAnswer == position.name;
+            final isCorrectAnswer = position.name == positions[currentQuestion].name;
+            
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: showResult ? null : () => _checkAnswer(position.name),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: showResult
+                        ? (isCorrectAnswer
+                            ? Colors.green.shade100
+                            : (isSelected && !isCorrectAnswer)
+                                ? Colors.red.shade100
+                                : Colors.white)
+                        : (isSelected
+                            ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                            : Colors.white),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: showResult
+                          ? (isCorrectAnswer
+                              ? Colors.green
+                              : (isSelected && !isCorrectAnswer)
+                                  ? Colors.red
+                                  : Colors.grey.shade300)
+                          : (isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.grey.shade300),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        position.name,
+                        style: TextStyle(
+                          color: showResult && isCorrectAnswer ? Colors.green : null,
+                          fontWeight: isSelected || (showResult && isCorrectAnswer) ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      if (showResult && isCorrectAnswer)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Icon(Icons.check_circle, color: Colors.green, size: 20),
+                        )
+                      else if (showResult && isSelected && !isCorrectAnswer)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Icon(Icons.cancel, color: Colors.red, size: 20),
+                        ),
+                    ],
+                  ),
+                ),
               ),
-              child: Text(position.name),
             );
           }).toList(),
         ),

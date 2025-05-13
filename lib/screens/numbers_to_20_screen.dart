@@ -60,38 +60,38 @@ class _NumbersTo20ScreenState extends State<NumbersTo20Screen> with SingleTicker
   final List<NumberActivity> activities = [
     NumberActivity(
       title: 'Count Objects',
-      description: 'Count the number of objects shown',
-      visual: _buildCountingVisual(5),
+      description: 'Learn to count objects from 1 to 20',
+      visual: _buildCountingVisual(15),
       example: 'Count the stars in the sky',
-      options: ['5', '4', '6', '7', '8'],
+      options: ['15', '14', '16', '17', '18'],
     ),
     NumberActivity(
       title: 'Number Line',
-      description: 'Find the missing number in the sequence',
-      visual: _buildNumberLineVisual([1, 2, 3, 4, 5]),
-      example: 'What number comes after 4?',
-      options: ['5', '4', '6', '7', '8'],
+      description: 'Understand number sequence from 1 to 20',
+      visual: _buildNumberLineVisual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]),
+      example: 'What number comes after 15?',
+      options: ['16', '15', '17', '18', '19'],
     ),
     NumberActivity(
       title: 'Number Comparison',
-      description: 'Which number is greater or smaller?',
-      visual: _buildComparisonVisual(7, 4),
-      example: 'Is 7 greater than 4?',
-      options: ['7', '4', '6', '8', '9'],
+      description: 'Compare numbers using greater than and less than',
+      visual: _buildComparisonVisual(15, 8),
+      example: 'Is 15 greater than 8?',
+      options: ['15', '8', '16', '18', '19'],
     ),
     NumberActivity(
       title: 'Number Patterns',
       description: 'Complete the number pattern',
-      visual: _buildPatternVisual([2, 4, 6, 8]),
-      example: 'What number comes next in 2, 4, 6, 8?',
-      options: ['10', '9', '11', '12', '13'],
+      visual: _buildPatternVisual([5, 10, 15, 20]),
+      example: 'What number comes next in 5, 10, 15, 20?',
+      options: ['25', '24', '26', '27', '28'],
     ),
     NumberActivity(
       title: 'Number Words',
-      description: 'Match the number with its word',
-      visual: _buildWordMatchVisual(3),
-      example: 'Match "three" with the number 3',
-      options: ['3', '2', '4', '5', '6'],
+      description: 'Match numbers with their written form',
+      visual: _buildWordMatchVisual(15),
+      example: 'Match "fifteen" with the number 15',
+      options: ['15', '14', '16', '17', '18'],
     ),
   ];
 
@@ -449,50 +449,32 @@ class _NumbersTo20ScreenState extends State<NumbersTo20Screen> with SingleTicker
       currentQuestion = 0;
       selectedAnswer = null;
       showResult = false;
-      
-      // Create questions based on the lesson activities
-      questions = [
-        // Count Objects question
-        Question(
-          num1: 5,
-          num2: 0,
-          operation: '+',
-          options: [5, 4, 6, 7],
-          correctAnswer: 5,
-        ),
-        // Number Line question
-        Question(
-          num1: 4,
-          num2: 1,
-          operation: '+',
-          options: [5, 4, 6, 7],
-          correctAnswer: 5,
-        ),
-        // Number Comparison question
-        Question(
-          num1: 7,
-          num2: 4,
-          operation: '-',
-          options: [3, 2, 4, 5],
-          correctAnswer: 3,
-        ),
-        // Number Patterns question
-        Question(
-          num1: 8,
-          num2: 2,
-          operation: '+',
-          options: [10, 9, 11, 12],
-          correctAnswer: 10,
-        ),
-        // Number Words question
-        Question(
-          num1: 3,
-          num2: 0,
-          operation: '+',
-          options: [3, 2, 4, 5],
-          correctAnswer: 3,
-        ),
-      ];
+      // Create a list of 5 random questions
+      questions = List.generate(5, (index) {
+        final num1 = Random().nextInt(20) + 1;  // Changed to 20
+        final num2 = Random().nextInt(20) + 1;  // Changed to 20
+        final operation = Random().nextBool() ? '+' : '-';
+        final answer = operation == '+' ? num1 + num2 : num1 - num2;
+        
+        // Generate options including the correct answer
+        final options = <int>[];
+        options.add(answer);
+        while (options.length < 4) {
+          final option = Random().nextInt(40) - 10; // Range from -10 to 29
+          if (!options.contains(option)) {
+            options.add(option);
+          }
+        }
+        options.shuffle(); // Shuffle the options
+        
+        return Question(
+          num1: num1,
+          num2: num2,
+          operation: operation,
+          options: options,
+          correctAnswer: answer,
+        );
+      });
     });
   }
 
@@ -660,17 +642,6 @@ class _NumbersTo20ScreenState extends State<NumbersTo20Screen> with SingleTicker
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 20),
-            // Question
-            Text(
-              '${questions[currentQuestion].num1} ${questions[currentQuestion].operation} ${questions[currentQuestion].num2}',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.secondary,
-              ),
-              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
             // Visual

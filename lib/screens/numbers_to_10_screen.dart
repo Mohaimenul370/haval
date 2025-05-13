@@ -526,17 +526,6 @@ class _NumbersTo10ScreenState extends State<NumbersTo10Screen> {
               ),
             ),
             const SizedBox(height: 20),
-            // Question
-            Text(
-              '${questions[currentQuestion].num1} ${questions[currentQuestion].operation} ${questions[currentQuestion].num2}',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.secondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
             // Visual
             Container(
               height: 200,

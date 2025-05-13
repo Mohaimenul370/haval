@@ -98,6 +98,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
       ),
     );
     _initializeStorage();
+    isGameMode = false;
   }
 
   Future<void> _initializeTts() async {
@@ -126,18 +127,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     try {
       final savedScore = await PreferenceService.getInt('statistics_score') ?? 0;
       final savedQuestion = await PreferenceService.getInt('statistics_question') ?? 0;
-      final savedGameMode = await PreferenceService.getBool('statistics_game_mode') ?? false;
 
       setState(() {
         score = savedScore;
         currentQuestion = savedQuestion;
-        isGameMode = savedGameMode;
         _isLoading = false;
       });
-
-      if (isGameMode) {
-        _startGame();
-      }
     } catch (e) {
       developer.log('Error loading game state: $e');
       setState(() {
@@ -165,7 +160,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
       showResult = false;
       shuffledStatistics = List.from(statistics)..shuffle();
       for (var statistic in shuffledStatistics) {
-        statistic.options.shuffle();
+        final options = List<String>.from(statistic.options);
+        options.shuffle();
+        statistic.options.clear();
+        statistic.options.addAll(options);
       }
       _animationController.reset();
       _animationController.forward();
@@ -325,85 +323,213 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
   }
 
   Widget _buildGameMode() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Question ${currentQuestion + 1} of ${shuffledStatistics.length}',
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'Score: $score',
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 40),
-        Container(
-          width: 200,
-          height: 200,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              shuffledStatistics[currentQuestion].visual,
-              const SizedBox(height: 10),
-              Text(
-                'What statistic is shown?',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxHeight < 600;
+        final isNarrowScreen = constraints.maxWidth < 360;
+        
+        return SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isNarrowScreen ? 8.0 : 16.0,
+              vertical: isSmallScreen ? 8.0 : 16.0,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Progress bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Question ${currentQuestion + 1}/${shuffledStatistics.length}',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 12 : 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: LinearProgressIndicator(
+                          value: (currentQuestion + 1) / shuffledStatistics.length,
+                          backgroundColor: Colors.grey.withOpacity(0.2),
+                          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                          minHeight: isSmallScreen ? 6 : 8,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 6 : 8,
+                          vertical: isSmallScreen ? 2 : 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          'Score: $score',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 10 : 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 40),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          alignment: WrapAlignment.center,
-          children: shuffledStatistics[currentQuestion].options.map((option) {
-            return ElevatedButton(
-              onPressed: showResult ? null : () => _checkAnswer(option),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: showResult
-                    ? (option == selectedAnswer
-                        ? (isCorrect ? Colors.green : Colors.red)
-                        : (option == shuffledStatistics[currentQuestion].name
-                            ? Colors.green
-                            : null))
-                    : null,
-              ),
-              child: Text(option),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 20),
-        if (showResult)
-          ElevatedButton(
-            onPressed: _nextQuestion,
-            child: Text(
-              currentQuestion < shuffledStatistics.length - 1 ? 'Next Question' : 'Finish Game',
+                SizedBox(height: isSmallScreen ? 12 : 20),
+                // Question
+                // Container(
+                //   width: double.infinity,
+                //   padding: const EdgeInsets.symmetric(horizontal: 16),
+                //   child: Text(
+                //     shuffledStatistics[currentQuestion].description,
+                //     style: TextStyle(
+                //       fontSize: isSmallScreen ? 16 : 20,
+                //       fontWeight: FontWeight.bold,
+                //       color: Theme.of(context).colorScheme.secondary,
+                //     ),
+                //     textAlign: TextAlign.center,
+                //   ),
+                // ),
+                SizedBox(height: isSmallScreen ? 12 : 20),
+                // Visual
+                Container(
+                  height: isSmallScreen ? 150 : 200,
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    child: shuffledStatistics[currentQuestion].visual,
+                  ),
+                ),
+                SizedBox(height: isSmallScreen ? 16 : 24),
+                // Answer options
+                ...shuffledStatistics[currentQuestion].options.map((option) {
+                  final isSelected = selectedAnswer == option;
+                  final isCorrect = showResult && option == shuffledStatistics[currentQuestion].name;
+                  final isIncorrect = showResult && isSelected && option != shuffledStatistics[currentQuestion].name;
+                  
+                  Color backgroundColor;
+                  if (isCorrect) {
+                    backgroundColor = Colors.green.shade100;
+                  } else if (isIncorrect) {
+                    backgroundColor = Colors.red.shade100;
+                  } else if (isSelected) {
+                    backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.2);
+                  } else {
+                    backgroundColor = Colors.white;
+                  }
+
+                  Color borderColor;
+                  if (isCorrect) {
+                    borderColor = Colors.green;
+                  } else if (isIncorrect) {
+                    borderColor = Colors.red;
+                  } else if (isSelected) {
+                    borderColor = Theme.of(context).colorScheme.primary;
+                  } else {
+                    borderColor = Colors.grey.shade300;
+                  }
+
+                  return Container(
+                    margin: EdgeInsets.only(
+                      bottom: isSmallScreen ? 6 : 8,
+                      left: isNarrowScreen ? 4 : 0,
+                      right: isNarrowScreen ? 4 : 0,
+                    ),
+                    child: Material(
+                      borderRadius: BorderRadius.circular(12),
+                      elevation: isSelected ? 4 : 1,
+                      child: InkWell(
+                        onTap: showResult ? null : () => _checkAnswer(option),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            vertical: isSmallScreen ? 8 : 12,
+                            horizontal: isSmallScreen ? 12 : 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: borderColor,
+                              width: 2,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  option,
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 12 : 14,
+                                    fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                ),
+                              ),
+                              if (isCorrect)
+                                Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                  size: isSmallScreen ? 16 : 20,
+                                )
+                              else if (isIncorrect)
+                                Icon(
+                                  Icons.cancel,
+                                  color: Colors.red,
+                                  size: isSmallScreen ? 16 : 20,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+                SizedBox(height: isSmallScreen ? 12 : 20),
+                // Next button
+                if (showResult)
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: _nextQuestion,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 24 : 32,
+                          vertical: isSmallScreen ? 12 : 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        currentQuestion < shuffledStatistics.length - 1 ? 'Next Question' : 'Finish Game',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 14 : 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                SizedBox(height: isSmallScreen ? 8 : 16),
+              ],
             ),
           ),
-      ],
+        );
+      },
     );
   }
 

@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.9.0'
+    ext.kotlin_version = '1.9.22'
     repositories {
         google()
         mavenCentral()
@@ -18,7 +18,7 @@ allprojects {
     }
 }
 
-// Add Java version configuration for all subprojects
+// Add Java and Kotlin version configuration for all subprojects
 subprojects {
     afterEvaluate { project ->
         if (project.hasProperty('android')) {
@@ -28,6 +28,31 @@ subprojects {
                     targetCompatibility JavaVersion.VERSION_17
                 }
             }
+        }
+        
+        // Configure Java toolchain
+        if (project.hasProperty('java')) {
+            java {
+                toolchain {
+                    languageVersion = JavaLanguageVersion.of(17)
+                }
+            }
+        }
+        
+        if (project.hasProperty('kotlin')) {
+            kotlin {
+                jvmToolchain(17)
+            }
+        }
+        
+        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+        
+        tasks.withType(JavaCompile).configureEach {
+            options.compilerArgs += ["--release", "17"]
         }
     }
 }
