@@ -198,7 +198,7 @@ class _NumbersScreenState extends State<NumbersScreen> with SingleTickerProvider
 
       // Save score if this is the last question
       if (currentQuestion == shuffledNumbers.length - 1) {
-        GameProgressService.saveGameScore('numbers', score, shuffledNumbers.length);
+        GameProgressService.saveGameProgress('numbers', score, shuffledNumbers.length);
       }
     });
   }

@@ -91,13 +91,13 @@ class GameProgressService {
     developer.log('Data validation complete');
   }
 
-  static Future<void> saveGameScore(String gameId, int score, int totalQuestions) async {
+  static Future<void> saveGameProgress(String gameId, int score, int totalQuestions) async {
     try {
       await initialize();
       final percentage = totalQuestions > 0 ? (score / totalQuestions) * 100 : 0.0;
       final isCompleted = percentage >= 50.0;
       
-      developer.log('Saving game score for $gameId:');
+      developer.log('Saving game progress for $gameId:');
       developer.log('Score: $score out of $totalQuestions');
       developer.log('Percentage: $percentage%');
       developer.log('Is completed: $isCompleted');
@@ -129,7 +129,7 @@ class GameProgressService {
         developer.log('Verification successful: Score and completion status saved correctly');
       }
     } catch (e) {
-      developer.log('Error saving game score: $e');
+      developer.log('Error saving game progress: $e');
       rethrow;
     }
   }

@@ -146,6 +146,16 @@ class _Time2ScreenState extends State<Time2Screen> with SingleTickerProviderStat
     await flutterTts.speak(text);
   }
 
+  List<String> _getShuffledOptions(TimeConcept concept) {
+    // Create a list of options including the correct answer
+    final List<String> options = List.from(concept.options);
+    
+    // Shuffle the options to randomize their order
+    options.shuffle();
+    
+    return options;
+  }
+
   void _startGame() {
     setState(() {
       isGameMode = true;
@@ -154,9 +164,6 @@ class _Time2ScreenState extends State<Time2Screen> with SingleTickerProviderStat
       selectedAnswer = null;
       showResult = false;
       shuffledConcepts = List.from(concepts)..shuffle();
-      for (var concept in shuffledConcepts) {
-        concept.options.shuffle();
-      }
       _animationController.reset();
       _animationController.forward();
     });
@@ -169,8 +176,6 @@ class _Time2ScreenState extends State<Time2Screen> with SingleTickerProviderStat
       isCorrect = answer == shuffledConcepts[currentQuestion].example;
       if (isCorrect) {
         score++;
-        _animationController.reset();
-        _animationController.forward();
         _speakText('Yay! You got it right! ${shuffledConcepts[currentQuestion].example} is correct!');
       } else {
         _speakText('Oops! Try again! Think about what we do ${shuffledConcepts[currentQuestion].name.toLowerCase()}');
@@ -180,30 +185,36 @@ class _Time2ScreenState extends State<Time2Screen> with SingleTickerProviderStat
       if (currentQuestion == shuffledConcepts.length - 1) {
         SharedPreferenceService.saveGameProgress('time_2', score, shuffledConcepts.length);
       }
+
+      // Automatically move to next question after a short delay
+      if (currentQuestion < shuffledConcepts.length - 1) {
+        Future.delayed(const Duration(seconds: 1), () {
+          _nextQuestion();
+        });
+      } else {
+        // Show completion dialog after a short delay
+        Future.delayed(const Duration(seconds: 1), () {
+          _showCompletionDialog();
+        });
+      }
     });
   }
 
-  void _nextQuestion() async {
-    if (currentQuestion < shuffledConcepts.length - 1) {
-      setState(() {
+  void _nextQuestion() {
+    setState(() {
+      if (currentQuestion < shuffledConcepts.length - 1) {
         currentQuestion++;
         selectedAnswer = null;
         showResult = false;
-        shuffledConcepts = List.from(concepts)..shuffle();
-        for (var concept in shuffledConcepts) {
-          concept.options.shuffle();
-        }
         _animationController.reset();
         _animationController.forward();
-      });
-      _speakText('Great job! Let\'s try another one!');
-    } else {
-      setState(() {
-        isGameMode = false;
-      });
-      _speakText('Wow! You finished the game! You got $score out of ${shuffledConcepts.length} correct! You\'re amazing!');
-      _showCompletionDialog();
-    }
+        _speakText('Next question!');
+      } else {
+        // Save final score and show completion dialog
+        SharedPreferenceService.saveGameProgress('time_2', score, shuffledConcepts.length);
+        _showCompletionDialog();
+      }
+    });
   }
 
   void _showCompletionDialog() {
@@ -478,7 +489,7 @@ class _Time2ScreenState extends State<Time2Screen> with SingleTickerProviderStat
             ),
             const SizedBox(height: 16),
             Column(
-              children: shuffledConcepts[currentQuestion].options.map((option) {
+              children: _getShuffledOptions(shuffledConcepts[currentQuestion]).map((option) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: ScaleTransition(
@@ -508,17 +519,6 @@ class _Time2ScreenState extends State<Time2Screen> with SingleTickerProviderStat
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
-            if (showResult)
-              ScaleTransition(
-                scale: _animation,
-                child: ElevatedButton(
-                  onPressed: _nextQuestion,
-                  child: Text(
-                    currentQuestion < shuffledConcepts.length - 1 ? 'Next Question' : 'Finish Game',
-                  ),
-                ),
-              ),
             const SizedBox(height: 16),
           ],
         ),

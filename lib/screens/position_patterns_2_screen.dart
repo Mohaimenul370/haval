@@ -94,7 +94,7 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
       name: 'Color Patterns',
       description: 'Understanding color patterns',
       visual: _buildPatternVisual(['🔴', '🟡', '🔴', '🟡']),
-      example: '🟡',
+      example: '🔴',
       options: [
         '🔴',
         '🟡',
@@ -107,7 +107,7 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
       name: 'Shape Patterns',
       description: 'Understanding shape patterns',
       visual: _buildPatternVisual(['⭐', '🔺', '⭐', '🔺']),
-      example: '🔺',
+      example: '⭐',
       options: [
         '⭐',
         '🔺',
@@ -120,7 +120,7 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
       name: 'Size Patterns',
       description: 'Understanding size patterns',
       visual: _buildSizePatternVisual(['big', 'small', 'big', 'small']),
-      example: 'small',
+      example: 'big',
       options: [
         'big',
         'small',
@@ -318,9 +318,11 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
       
       if (isCorrect) {
         score++;
-        _speakText('Correct! ${currentConcept.description}');
+        _animationController.reset();
+        _animationController.forward();
+        _speakText('Yay! You got it right! ${currentConcept.description}');
       } else {
-        _speakText('Try again! Think about the ${currentConcept.name.toLowerCase()}');
+        _speakText('Oops! Try again! Think about the ${currentConcept.name.toLowerCase()}');
       }
 
       // Save score if this is the last question
@@ -804,8 +806,8 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
             // Answer options
             ...options.map((option) {
               final isSelected = selectedAnswer == option;
-              final isCorrect = showResult && option == concept.name;
-              final isIncorrect = showResult && isSelected && option != concept.name;
+              final isCorrect = showResult && option == concept.example;
+              final isIncorrect = showResult && isSelected && option != concept.example;
               
               Color backgroundColor;
               if (isCorrect) {
@@ -829,43 +831,46 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
                 borderColor = Colors.grey.shade300;
               }
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: Material(
-                  borderRadius: BorderRadius.circular(12),
-                  elevation: isSelected ? 4 : 1,
-                  child: InkWell(
-                    onTap: showResult ? null : () => _checkAnswer(option),
+              return ScaleTransition(
+                scale: _animation,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: Material(
                     borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: backgroundColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: borderColor,
-                          width: 2,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              option,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 2,
-                            ),
+                    elevation: isSelected ? 4 : 1,
+                    child: InkWell(
+                      onTap: showResult ? null : () => _checkAnswer(option),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: backgroundColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: borderColor,
+                            width: 2,
                           ),
-                          if (isCorrect)
-                            const Icon(Icons.check_circle, color: Colors.green, size: 20)
-                          else if (isIncorrect)
-                            const Icon(Icons.cancel, color: Colors.red, size: 20),
-                        ],
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                option,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
+                              ),
+                            ),
+                            if (isCorrect)
+                              const Icon(Icons.check_circle, color: Colors.green, size: 20)
+                            else if (isIncorrect)
+                              const Icon(Icons.cancel, color: Colors.red, size: 20),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -875,21 +880,24 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
             const SizedBox(height: 20),
             // Next button
             if (showResult)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _nextQuestion,
-                  icon: const Icon(Icons.arrow_forward, size: 18),
-                  label: Text(
-                    currentQuestion < shuffledConcepts.length - 1 ? 'Next Question' : 'Finish Game',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              ScaleTransition(
+                scale: _animation,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _nextQuestion,
+                    icon: const Icon(Icons.arrow_forward, size: 18),
+                    label: Text(
+                      currentQuestion < shuffledConcepts.length - 1 ? 'Next Question' : 'Finish Game',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),

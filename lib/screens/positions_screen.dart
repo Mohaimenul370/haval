@@ -25,7 +25,7 @@ class PositionsScreen extends StatefulWidget {
   State<PositionsScreen> createState() => _PositionsScreenState();
 }
 
-class _PositionsScreenState extends State<PositionsScreen> {
+class _PositionsScreenState extends State<PositionsScreen> with SingleTickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
   bool isGameMode = false;
   int score = 0;
@@ -33,6 +33,8 @@ class _PositionsScreenState extends State<PositionsScreen> {
   String? selectedAnswer;
   bool showResult = false;
   bool isCorrect = false;
+  late AnimationController _animationController;
+  late Animation<double> _animation;
 
   final List<Position> positions = [
     Position(
@@ -90,6 +92,9 @@ class _PositionsScreenState extends State<PositionsScreen> {
       example: 'The moon is behind the clouds',
     ),
   ];
+
+  List<Position> gamePositions = [];
+  List<String> _currentOptions = [];
 
   static Widget _buildPositionVisual(String position) {
     switch (position) {
@@ -325,6 +330,16 @@ class _PositionsScreenState extends State<PositionsScreen> {
   void initState() {
     super.initState();
     _initializeTts();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
   }
 
   Future<void> _initializeTts() async {
@@ -344,6 +359,12 @@ class _PositionsScreenState extends State<PositionsScreen> {
       currentQuestion = 0;
       selectedAnswer = null;
       showResult = false;
+      // Shuffle and limit the number of questions to 5
+      gamePositions = List.from(positions)..shuffle();
+      gamePositions = gamePositions.take(5).toList();
+      _currentOptions = _getShuffledOptions(gamePositions[currentQuestion]); // Initialize options for the first question
+      _animationController.reset();
+      _animationController.forward();
     });
   }
 
@@ -351,38 +372,53 @@ class _PositionsScreenState extends State<PositionsScreen> {
     setState(() {
       selectedAnswer = answer;
       showResult = true;
-      isCorrect = answer == positions[currentQuestion].name;
+      isCorrect = answer == gamePositions[currentQuestion].name;
       if (isCorrect) {
         score++;
-        _speakText('Correct! ${positions[currentQuestion].description}');
+        _speakText('Yay! You got it right! ${gamePositions[currentQuestion].name} is correct!');
       } else {
-        _speakText('Try again! Think about the position.');
+        _speakText('Oops! Try again! Think about the position.');
       }
 
       // Save score if this is the last question
-      if (currentQuestion == positions.length - 1) {
-        SharedPreferenceService.saveGameProgress('positions', score, positions.length);
+      if (currentQuestion == gamePositions.length - 1) {
+        SharedPreferenceService.saveGameProgress('positions', score, gamePositions.length);
+      }
+
+      // Automatically move to next question after a short delay
+      if (currentQuestion < gamePositions.length - 1) {
+        Future.delayed(const Duration(seconds: 1), () {
+          _nextQuestion();
+        });
+      } else {
+        // Show completion dialog after a short delay
+        Future.delayed(const Duration(seconds: 1), () {
+          _showCompletionDialog();
+        });
       }
     });
   }
 
   void _nextQuestion() {
     setState(() {
-      if (currentQuestion < positions.length - 1) {
+      if (currentQuestion < gamePositions.length - 1) {
         currentQuestion++;
         selectedAnswer = null;
         showResult = false;
+        _currentOptions = _getShuffledOptions(gamePositions[currentQuestion]); // Update options for the new question
+        _animationController.reset();
+        _animationController.forward();
         _speakText('Next question!');
       } else {
         // Save final score and show completion dialog
-        SharedPreferenceService.saveGameProgress('positions', score, positions.length);
+        SharedPreferenceService.saveGameProgress('positions', score, gamePositions.length);
         _showCompletionDialog();
       }
     });
   }
 
   void _showCompletionDialog() {
-    final percentage = (score / positions.length) * 100;
+    final percentage = (score / gamePositions.length) * 100;
     final isPassed = percentage >= 50.0;
     
     showDialog(
@@ -409,7 +445,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                 ),
               const SizedBox(height: 20),
               Text(
-                'Your score: $score out of ${positions.length}',
+                'Your score: $score out of ${gamePositions.length}',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w500,
@@ -494,139 +530,155 @@ class _PositionsScreenState extends State<PositionsScreen> {
   }
 
   Widget _buildGameMode() {
-    // Create a list of options including the correct answer and 3 random wrong answers
-    List<Position> allOptions = List.from(positions);
-    allOptions.remove(positions[currentQuestion]); // Remove the correct answer
-    allOptions.shuffle(); // Shuffle the remaining options
-    List<Position> wrongOptions = allOptions.take(3).toList(); // Take 3 random wrong options
-    List<Position> options = [...wrongOptions, positions[currentQuestion]]; // Add the correct answer
-    options.shuffle(); // Shuffle all options together
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Question ${currentQuestion + 1} of ${positions.length}',
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'Score: $score',
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 40),
-        Container(
-          width: 200,
-          height: 200,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              positions[currentQuestion].visual,
-              const SizedBox(height: 10),
-              Text(
-                'What position is shown?',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 40),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          alignment: WrapAlignment.center,
-          children: options.map((position) {
-            final isSelected = selectedAnswer == position.name;
-            final isCorrectAnswer = position.name == positions[currentQuestion].name;
-            
-            return Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: showResult ? null : () => _checkAnswer(position.name),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: showResult
-                        ? (isCorrectAnswer
-                            ? Colors.green.shade100
-                            : (isSelected && !isCorrectAnswer)
-                                ? Colors.red.shade100
-                                : Colors.white)
-                        : (isSelected
-                            ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-                            : Colors.white),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: showResult
-                          ? (isCorrectAnswer
-                              ? Colors.green
-                              : (isSelected && !isCorrectAnswer)
-                                  ? Colors.red
-                                  : Colors.grey.shade300)
-                          : (isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.grey.shade300),
-                      width: 2,
-                    ),
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxHeight < 600;
+        final isNarrowScreen = constraints.maxWidth < 360;
+        
+        return SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isNarrowScreen ? 8.0 : 16.0,
+              vertical: isSmallScreen ? 8.0 : 16.0,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Progress bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        position.name,
-                        style: TextStyle(
-                          color: showResult && isCorrectAnswer ? Colors.green : null,
-                          fontWeight: isSelected || (showResult && isCorrectAnswer) ? FontWeight.bold : FontWeight.normal,
+                        'Question ${currentQuestion + 1} of ${gamePositions.length}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (showResult && isCorrectAnswer)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8),
-                          child: Icon(Icons.check_circle, color: Colors.green, size: 20),
-                        )
-                      else if (showResult && isSelected && !isCorrectAnswer)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8),
-                          child: Icon(Icons.cancel, color: Colors.red, size: 20),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: LinearProgressIndicator(
+                          value: (currentQuestion + 1) / gamePositions.length,
+                          backgroundColor: Colors.grey.withOpacity(0.2),
+                          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                          minHeight: 8,
+                          borderRadius: BorderRadius.circular(4),
                         ),
+                      ),
+                      const SizedBox(width: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          'Score: $score',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 20),
-        if (showResult)
-          ElevatedButton(
-            onPressed: _nextQuestion,
-            child: Text(
-              currentQuestion < positions.length - 1 ? 'Next Question' : 'Finish Game',
+                const SizedBox(height: 24),
+                // Question
+                Text(
+                  'What is this position concept?',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                // Visual
+                Container(
+                  height: 120,
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  child: gamePositions[currentQuestion].visual,
+                ),
+                const SizedBox(height: 32),
+                // Answer options
+                ..._currentOptions.map((option) {
+                  final isSelected = selectedAnswer == option;
+                  final isCorrect = showResult && option == gamePositions[currentQuestion].name;
+                  final isIncorrect = showResult && isSelected && option != gamePositions[currentQuestion].name;
+                  
+                  Color backgroundColor;
+                  if (isCorrect) {
+                    backgroundColor = Colors.green.shade100;
+                  } else if (isIncorrect) {
+                    backgroundColor = Colors.red.shade100;
+                  } else if (isSelected) {
+                    backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.2);
+                  } else {
+                    backgroundColor = Colors.white;
+                  }
+
+                  Color borderColor;
+                  if (isCorrect) {
+                    borderColor = Colors.green;
+                  } else if (isIncorrect) {
+                    borderColor = Colors.red;
+                  } else if (isSelected) {
+                    borderColor = Theme.of(context).colorScheme.primary;
+                  } else {
+                    borderColor = Colors.grey.shade300;
+                  }
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Material(
+                      borderRadius: BorderRadius.circular(12),
+                      elevation: isSelected ? 4 : 1,
+                      child: InkWell(
+                        onTap: showResult ? null : () => _checkAnswer(option),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: borderColor,
+                              width: 2,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  option,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                              if (isCorrect)
+                                const Icon(Icons.check_circle, color: Colors.green)
+                              else if (isIncorrect)
+                                const Icon(Icons.cancel, color: Colors.red),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ],
             ),
           ),
-      ],
+        );
+      },
     );
   }
 
@@ -753,8 +805,31 @@ class _PositionsScreenState extends State<PositionsScreen> {
     );
   }
 
+  List<String> _getShuffledOptions(Position position) {
+    // Create a list of all possible answers (all position names)
+    final List<String> allOptions = positions.map((p) => p.name).toList();
+    
+    // Remove the correct answer from the list
+    allOptions.remove(position.name);
+    
+    // Shuffle the remaining options
+    allOptions.shuffle();
+    
+    // Take 3 wrong options
+    final List<String> wrongOptions = allOptions.take(3).toList();
+    
+    // Add the correct answer
+    final List<String> options = [...wrongOptions, position.name];
+    
+    // Shuffle options once and store them
+    options.shuffle();
+    
+    return options;
+  }
+
   @override
   void dispose() {
+    _animationController.dispose();
     flutterTts.stop();
     super.dispose();
   }

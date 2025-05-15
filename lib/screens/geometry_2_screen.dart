@@ -73,6 +73,8 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
     ),
   ];
 
+  List<String> _options = [];
+
   static Widget _buildSymmetryVisual() {
     return Container(
       width: 200,
@@ -202,6 +204,7 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
       _currentQuestion = 0;
       _showResult = false;
       _selectedAnswer = null;
+      _options = _getRandomOptions(concepts[_currentQuestion]); // Initialize options for the first question
     });
   }
 
@@ -285,6 +288,7 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
         _currentQuestion++;
         _selectedAnswer = null;
         _showResult = false;
+        _options = _getRandomOptions(concepts[_currentQuestion]); // Update options for the new question
         _speakText('Next question!');
       } else {
         // Save final score and show completion dialog
@@ -310,9 +314,10 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
     // Add the correct answer
     final List<String> options = [...wrongOptions, concept.name];
     
-    // Shuffle the final list
+    // Shuffle options once and store them
     options.shuffle();
     
+    // Return options
     return options;
   }
 
@@ -577,7 +582,8 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
 
     // Current game question view
     final concept = concepts[_currentQuestion];
-    final options = _getRandomOptions(concept);
+    // Use stored options
+    final options = _options;
 
     return SingleChildScrollView(
       child: Padding(

@@ -141,13 +141,6 @@ class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProvid
         SharedPreferenceService.saveGameProgress('geometry', score, shuffledConcepts.length);
       }
     });
-
-    // Automatically move to next question after 1.5 seconds
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) {  // Check if widget is still mounted
-        _nextQuestion();
-      }
-    });
   }
 
   void _nextQuestion() {
@@ -249,110 +242,213 @@ class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProvid
   }
 
   Widget _buildGameMode() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Question ${currentQuestion + 1} of ${shuffledConcepts.length}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxHeight < 600;
+        final isNarrowScreen = constraints.maxWidth < 360;
+        
+        return SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isNarrowScreen ? 8.0 : 16.0,
+              vertical: isSmallScreen ? 8.0 : 16.0,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Score: $score',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ScaleTransition(
-              scale: _animation,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Progress bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Question ${currentQuestion + 1}/${shuffledConcepts.length}',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 12 : 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: LinearProgressIndicator(
+                          value: (currentQuestion + 1) / shuffledConcepts.length,
+                          backgroundColor: Colors.grey.withOpacity(0.2),
+                          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                          minHeight: isSmallScreen ? 6 : 8,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 6 : 8,
+                          vertical: isSmallScreen ? 2 : 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          'Score: $score',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 10 : 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    shuffledConcepts[currentQuestion].visual,
-                    const SizedBox(height: 10),
-                    Text(
-                      'What shape is this?',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+                SizedBox(height: isSmallScreen ? 12 : 20),
+                // Question
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'What shape is this?',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 16 : 20,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(height: isSmallScreen ? 12 : 20),
+                // Visual
+                Container(
+                  height: isSmallScreen ? 150 : 200,
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    child: shuffledConcepts[currentQuestion].visual,
+                  ),
+                ),
+                SizedBox(height: isSmallScreen ? 16 : 24),
+                // Answer options
+                ...shuffledConcepts[currentQuestion].options.map((option) {
+                  final isSelected = selectedAnswer == option;
+                  final isCorrect = showResult && option == shuffledConcepts[currentQuestion].name;
+                  final isIncorrect = showResult && isSelected && option != shuffledConcepts[currentQuestion].name;
+                  
+                  Color backgroundColor;
+                  if (isCorrect) {
+                    backgroundColor = Colors.green.shade100;
+                  } else if (isIncorrect) {
+                    backgroundColor = Colors.red.shade100;
+                  } else if (isSelected) {
+                    backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.2);
+                  } else {
+                    backgroundColor = Colors.white;
+                  }
+
+                  Color borderColor;
+                  if (isCorrect) {
+                    borderColor = Colors.green;
+                  } else if (isIncorrect) {
+                    borderColor = Colors.red;
+                  } else if (isSelected) {
+                    borderColor = Theme.of(context).colorScheme.primary;
+                  } else {
+                    borderColor = Colors.grey.shade300;
+                  }
+
+                  return Container(
+                    margin: EdgeInsets.only(
+                      bottom: isSmallScreen ? 6 : 8,
+                      left: isNarrowScreen ? 4 : 0,
+                      right: isNarrowScreen ? 4 : 0,
+                    ),
+                    child: Material(
+                      borderRadius: BorderRadius.circular(12),
+                      elevation: isSelected ? 4 : 1,
+                      child: InkWell(
+                        onTap: showResult ? null : () => _checkAnswer(option),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            vertical: isSmallScreen ? 8 : 12,
+                            horizontal: isSmallScreen ? 12 : 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: borderColor,
+                              width: 2,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  option,
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 12 : 14,
+                                    fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                ),
+                              ),
+                              if (isCorrect)
+                                Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                  size: isSmallScreen ? 16 : 20,
+                                )
+                              else if (isIncorrect)
+                                Icon(
+                                  Icons.cancel,
+                                  color: Colors.red,
+                                  size: isSmallScreen ? 16 : 20,
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ),
+                  );
+                }).toList(),
+                SizedBox(height: isSmallScreen ? 12 : 20),
+                // Next button
+                if (showResult)
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: _nextQuestion,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 24 : 32,
+                          vertical: isSmallScreen ? 12 : 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        currentQuestion < shuffledConcepts.length - 1 ? 'Next Question' : 'Finish Game',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 14 : 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                SizedBox(height: isSmallScreen ? 8 : 16),
+              ],
             ),
-            const SizedBox(height: 40),
-            ...shuffledConcepts[currentQuestion].options.map((option) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: ElevatedButton(
-                  onPressed: showResult ? null : () => _checkAnswer(option),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: showResult
-                        ? option == shuffledConcepts[currentQuestion].name
-                            ? Colors.green
-                            : option == selectedAnswer
-                                ? Colors.red
-                                : Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    option,
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                ),
-              );
-            }).toList(),
-            if (showResult)
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton(
-                  onPressed: _nextQuestion,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Next Question',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:developer' as developer;
 import '../services/preference_service.dart';
 import '../services/shared_preference_service.dart';
+import '../widgets/menu_card.dart';
 import 'dart:math';
 
 class Question {
@@ -38,15 +39,20 @@ class NumberActivity {
 }
 
 class NumbersTo10Screen extends StatefulWidget {
-  const NumbersTo10Screen({super.key});
+  final bool isGameMode;
+  
+  const NumbersTo10Screen({
+    super.key,
+    this.isGameMode = false,
+  });
 
   @override
   State<NumbersTo10Screen> createState() => _NumbersTo10ScreenState();
 }
 
-class _NumbersTo10ScreenState extends State<NumbersTo10Screen> {
+class _NumbersTo10ScreenState extends State<NumbersTo10Screen> with SingleTickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
-  bool isGameMode = false;
+  late bool isGameMode;
   int score = 0;
   int currentQuestion = 0;
   int? selectedAnswer;
@@ -54,264 +60,22 @@ class _NumbersTo10ScreenState extends State<NumbersTo10Screen> {
   bool isCorrect = false;
   int currentNumber = 1;
   List<Question> questions = [];
-
-  final List<NumberActivity> activities = [
-    NumberActivity(
-      title: 'Count Objects',
-      description: 'Learn to count objects from 1 to 10',
-      visual: _buildCountingVisual(5),
-      instruction: 'Count the objects and select the correct number',
-      options: ['5', '4', '6', '7', '8'],
-    ),
-    NumberActivity(
-      title: 'Number Line',
-      description: 'Understand number sequence from 1 to 10',
-      visual: _buildNumberLine(),
-      instruction: 'Find the missing number in the sequence',
-      options: ['5', '4', '6', '7', '8'],
-    ),
-    NumberActivity(
-      title: 'Number Words',
-      description: 'Match numbers with their written form',
-      visual: _buildNumberWords(),
-      instruction: 'Match the number with its word',
-      options: ['5', '4', '6', '7', '8'],
-    ),
-    NumberActivity(
-      title: 'Before and After',
-      description: 'Learn numbers that come before and after',
-      visual: _buildBeforeAfterVisual(5),
-      instruction: 'What number comes before and after?',
-      options: ['5', '4', '6', '7', '8'],
-    ),
-    NumberActivity(
-      title: 'Number Comparison',
-      description: 'Compare numbers using greater than and less than',
-      visual: _buildComparisonVisual(3, 7),
-      instruction: 'Which number is greater?',
-      options: ['7', '3', '6', '8', '9'],
-    ),
-  ];
-
-  static Widget _buildCountingVisual(int count) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxWidth = constraints.maxWidth;
-        final dotSize = maxWidth > 300 ? 40.0 : 30.0;
-        final spacing = maxWidth > 300 ? 5.0 : 3.0;
-        
-        return Wrap(
-          alignment: WrapAlignment.center,
-          spacing: spacing,
-          runSpacing: spacing,
-          children: List.generate(
-            count,
-            (index) => Container(
-              width: dotSize,
-              height: dotSize,
-              decoration: BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-        );
-      }
-    );
-  }
-
-  static Widget _buildNumberLine() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            10,
-            (index) => Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: Colors.green,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  '${index + 1}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  static Widget _buildNumberWords() {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.purple,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Text(
-            'Five',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.orange,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Text(
-            '5',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  static Widget _buildBeforeAfterVisual(int number) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: Colors.red,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              '${number - 1}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 20),
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: Colors.blue,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              '$number',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 20),
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: Colors.green,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              '${number + 1}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  static Widget _buildComparisonVisual(int num1, int num2) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: Colors.blue,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              '$num1',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 20),
-        const Text(
-          '?',
-          style: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(width: 20),
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: Colors.green,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              '$num2',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  late List<NumberActivity> activities;
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
+    isGameMode = widget.isGameMode;
     _initializeTts();
+    _initializeAnimation();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeActivities();
+    });
+    if (isGameMode) {
+      _startGame();
+    }
   }
 
   Future<void> _initializeTts() async {
@@ -340,13 +104,29 @@ class _NumbersTo10ScreenState extends State<NumbersTo10Screen> {
         
         // Generate options including the correct answer
         final options = <int>[];
+        // Add the correct answer
         options.add(answer);
+        
+        // Generate unique wrong options
         while (options.length < 4) {
-          final option = Random().nextInt(20) - 5; // Range from -5 to 14
-          if (!options.contains(option)) {
-            options.add(option);
+          // Generate a random number within a reasonable range
+          int wrongOption;
+          if (operation == '+') {
+            // For addition, generate numbers close to the answer
+            wrongOption = answer + (Random().nextInt(5) - 2); // Range: answer-2 to answer+2
+          } else {
+            // For subtraction, generate numbers close to the answer
+            wrongOption = answer + (Random().nextInt(5) - 2); // Range: answer-2 to answer+2
+          }
+          
+          // Make sure the wrong option is not the same as the answer
+          // and not already in the options list
+          if (wrongOption != answer && !options.contains(wrongOption)) {
+            options.add(wrongOption);
           }
         }
+        
+        // Shuffle the options to randomize their positions
         options.shuffle();
         
         return Question(
@@ -360,31 +140,53 @@ class _NumbersTo10ScreenState extends State<NumbersTo10Screen> {
     });
   }
 
+  void _initializeAnimation() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
   void _checkAnswer(int answer) {
     setState(() {
       selectedAnswer = answer;
       showResult = true;
       isCorrect = answer == questions[currentQuestion].correctAnswer;
-      if (isCorrect) {
-        score++;
-        _speakText('Correct! ${questions[currentQuestion].num1} ${questions[currentQuestion].operation} ${questions[currentQuestion].num2} equals $answer');
-      } else {
-        _speakText('Try again! The correct answer is ${questions[currentQuestion].correctAnswer}');
+    });
+
+    // Start animation
+    _animationController.forward().then((_) {
+      _animationController.reverse();
+    });
+
+    if (isCorrect) {
+      score++;
+      _speakText('Correct! ${questions[currentQuestion].num1} ${questions[currentQuestion].operation} ${questions[currentQuestion].num2} equals $answer');
+    } else {
+      _speakText('Try again! The correct answer is ${questions[currentQuestion].correctAnswer}');
+    }
+
+    // Move to next question after animation
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        if (currentQuestion < questions.length - 1) {
+          setState(() {
+            currentQuestion++;
+            selectedAnswer = null;
+            showResult = false;
+          });
+          _speakText('Next question!');
+        } else {
+          _showCompletionDialog();
+        }
       }
     });
-  }
-
-  void _nextQuestion() {
-    if (currentQuestion < questions.length - 1) {
-      setState(() {
-        currentQuestion++;
-        selectedAnswer = null;
-        showResult = false;
-      });
-      _speakText('Next question!');
-    } else {
-      _showCompletionDialog();
-    }
   }
 
   void _showCompletionDialog() {
@@ -397,44 +199,170 @@ class _NumbersTo10ScreenState extends State<NumbersTo10Screen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(isPassed ? 'Congratulations!' : 'Keep Practicing!'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isPassed)
-              const Icon(
-                Icons.check_circle,
-                color: Colors.green,
-                size: 48,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
-            const SizedBox(height: 16),
-            Text(
-              'Your score: $score out of ${questions.length}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            if (isPassed)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text(
-                  'You completed this section!',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with Icon
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isPassed 
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isPassed ? Icons.emoji_events : Icons.school,
+                  size: 48,
+                  color: isPassed ? Colors.green : Colors.orange,
                 ),
               ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              Navigator.of(context).pop(); // Return to home screen
-            },
-            child: const Text('Go to Home'),
+              const SizedBox(height: 24),
+              
+              // Title
+              Text(
+                isPassed ? 'Congratulations!' : 'Keep Practicing!',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: isPassed ? Colors.green : Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Score Display
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Your Score',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$score',
+                          style: TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        Text(
+                          ' / ${questions.length}',
+                          style: TextStyle(
+                            fontSize: 24,
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${percentage.toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Message
+              Text(
+                isPassed
+                    ? 'Great job! You\'ve mastered the numbers!'
+                    : 'You\'re getting there! Practice makes perfect.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[700],
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Buttons
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
+                      Navigator.of(context).pop(); // Return to home screen
+                    },
+                    icon: const Icon(Icons.home),
+                    label: const Text('Go to Home'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  if (isPassed)
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // Close dialog
+                        _startGame(); // Start new game
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Play Again'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.secondary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -442,187 +370,185 @@ class _NumbersTo10ScreenState extends State<NumbersTo10Screen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F5F2),
       appBar: AppBar(
-        title: Text(isGameMode ? 'Numbers to 10 Game' : 'Learn Numbers to 10'),
+        title: Text(isGameMode ? 'Practice Game' : 'Learn Numbers'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
-        actions: [
-          if (!isGameMode)
-            IconButton(
-              icon: const Icon(Icons.games),
-              onPressed: _startGame,
-              tooltip: 'Start Game',
-            ),
-        ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.3),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: isGameMode ? _buildGameMode() : _buildLearningMode(),
-        ),
-      ),
+      body: isGameMode ? _buildGameMode() : _buildLearningMode(),
     );
   }
 
   Widget _buildGameMode() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Progress bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      'Question ${currentQuestion + 1}/${questions.length}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+    return Container(
+      height: MediaQuery.of(context).size.height,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Progress bar
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                        Theme.of(context).colorScheme.primary.withOpacity(0.9),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: LinearProgressIndicator(
-                      value: (currentQuestion + 1) / questions.length,
-                      backgroundColor: Colors.grey.withOpacity(0.2),
-                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                      minHeight: 8,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      'Score: $score',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Visual
-            Container(
-              height: 200,
-              width: double.infinity,
-              alignment: Alignment.center,
-              child: FittedBox(
-                fit: BoxFit.contain,
-                child: _buildVisual(questions[currentQuestion]),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Answer options
-            ...questions[currentQuestion].options.map((option) {
-              final isSelected = selectedAnswer == option;
-              final isCorrect = showResult && option == questions[currentQuestion].correctAnswer;
-              final isIncorrect = showResult && isSelected && option != questions[currentQuestion].correctAnswer;
-              
-              Color backgroundColor;
-              if (isCorrect) {
-                backgroundColor = Colors.green.shade100;
-              } else if (isIncorrect) {
-                backgroundColor = Colors.red.shade100;
-              } else if (isSelected) {
-                backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.2);
-              } else {
-                backgroundColor = Colors.white;
-              }
-
-              Color borderColor;
-              if (isCorrect) {
-                borderColor = Colors.green;
-              } else if (isIncorrect) {
-                borderColor = Colors.red;
-              } else if (isSelected) {
-                borderColor = Theme.of(context).colorScheme.primary;
-              } else {
-                borderColor = Colors.grey.shade300;
-              }
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: Material(
-                  borderRadius: BorderRadius.circular(12),
-                  elevation: isSelected ? 4 : 1,
-                  child: InkWell(
-                    onTap: showResult ? null : () => _checkAnswer(option),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: backgroundColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: borderColor,
-                          width: 2,
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Question ${currentQuestion + 1}/${questions.length}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              option.toString(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 2,
-                            ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: (currentQuestion + 1) / questions.length,
+                            backgroundColor: Colors.white.withOpacity(0.2),
+                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                            minHeight: 8,
                           ),
-                          if (isCorrect)
-                            const Icon(Icons.check_circle, color: Colors.green, size: 20)
-                          else if (isIncorrect)
-                            const Icon(Icons.cancel, color: Colors.red, size: 20),
-                        ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          'Score: $score',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              );
-            }).toList(),
-            const SizedBox(height: 20),
-            // Next button
-            if (showResult)
-              ElevatedButton(
-                onPressed: _nextQuestion,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
+              const SizedBox(height: 20),
+              // Visual
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Text(
-                  currentQuestion < questions.length - 1 ? 'Next Question' : 'Finish Game',
+                child: Container(
+                  height: 200,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Theme.of(context).colorScheme.secondary.withOpacity(0.7),
+                        Theme.of(context).colorScheme.secondary.withOpacity(0.9),
+                      ],
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  alignment: Alignment.center,
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    child: _buildVisual(questions[currentQuestion]),
+                  ),
                 ),
               ),
-          ],
+              const SizedBox(height: 24),
+              // Answer options with animation
+              ...questions[currentQuestion].options.map((option) {
+                final isSelected = selectedAnswer == option;
+                final isCorrect = showResult && option == questions[currentQuestion].correctAnswer;
+                final isIncorrect = showResult && isSelected && option != questions[currentQuestion].correctAnswer;
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: AnimatedBuilder(
+                    animation: _animationController,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: isSelected ? _scaleAnimation.value : 1.0,
+                        child: Material(
+                          borderRadius: BorderRadius.circular(12),
+                          elevation: isSelected ? 4 : 1,
+                          child: InkWell(
+                            onTap: showResult ? null : () => _checkAnswer(option),
+                            borderRadius: BorderRadius.circular(12),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                              decoration: BoxDecoration(
+                                color: _getOptionColor(isSelected, isCorrect, isIncorrect),
+                                borderRadius: BorderRadius.circular(12),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    _getOptionColor(isSelected, isCorrect, isIncorrect),
+                                    _getOptionColor(isSelected, isCorrect, isIncorrect).withOpacity(0.8),
+                                  ],
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      option.toString(),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 2,
+                                    ),
+                                  ),
+                                  if (isCorrect)
+                                    const Icon(Icons.check_circle, color: Colors.white, size: 24)
+                                  else if (isIncorrect)
+                                    const Icon(Icons.cancel, color: Colors.white, size: 24),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
         ),
       ),
     );
@@ -631,124 +557,135 @@ class _NumbersTo10ScreenState extends State<NumbersTo10Screen> {
   Widget _buildLearningMode() {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-          child: Text(
-            'Learn Numbers to 10',
-            style: TextStyle(
-              fontSize: 24,
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
         Expanded(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Introduction
-                  Text(
-                    'Understanding Numbers',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Let\'s learn about numbers from 1 to 10:',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Number Concepts
-                  ...activities.map((activity) {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: activities.length,
+            itemBuilder: (context, index) {
+              final activity = activities[index];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: InkWell(
+                  onTap: () => _handleActivityTap(activity, index),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Text(
-                              activity.title,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Lesson ${index + 1}',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            Center(
-                              child: activity.visual,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              activity.description,
-                              style: const TextStyle(fontSize: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                activity.title,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    );
-                  }).toList(),
-
-                  const SizedBox(height: 24),
-
-                  // Practice Section
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Ready to Practice?',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+                        const SizedBox(height: 12),
+                        Text(
+                          activity.description,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
                           ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Test your understanding by playing the game! You\'ll need to:',
-                            style: TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(height: 16),
+                        activity.visual,
+                        const SizedBox(height: 16),
+                        Text(
+                          activity.instruction,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w500,
                           ),
-                          const SizedBox(height: 8),
-                          const Text('• Count objects correctly'),
-                          const Text('• Identify numbers in sequence'),
-                          const Text('• Compare numbers'),
-                          const Text('• Get at least half the questions right to complete the game'),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: ElevatedButton.icon(
-                              onPressed: _startGame,
-                              icon: const Icon(Icons.games),
-                              label: const Text('Start Game'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ],
     );
+  }
+
+  void _handleActivityTap(NumberActivity activity, int index) {
+    _speakText('${activity.title}. ${activity.instruction}');
+    // Show interactive lesson dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(activity.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            activity.visual,
+            const SizedBox(height: 16),
+            Text(activity.instruction),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: activity.options.map((option) => ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _speakText('You selected $option. Let\'s practice more!');
+                },
+                child: Text(option),
+              )).toList(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getActivityIcon(int index) {
+    switch (index) {
+      case 0:
+        return Icons.format_list_numbered;
+      case 1:
+        return Icons.timeline;
+      case 2:
+        return Icons.text_fields;
+      case 3:
+        return Icons.compare_arrows;
+      case 4:
+        return Icons.compare;
+      default:
+        return Icons.numbers;
+    }
   }
 
   Widget _buildVisual(Question question) {
@@ -756,7 +693,7 @@ class _NumbersTo10ScreenState extends State<NumbersTo10Screen> {
       width: 200,
       height: 200,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -771,18 +708,19 @@ class _NumbersTo10ScreenState extends State<NumbersTo10Screen> {
         children: [
           Text(
             '${question.num1} ${question.operation} ${question.num2}',
-            style: const TextStyle(
-              fontSize: 24,
+            style: TextStyle(
+              fontSize: 32,
               fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(height: 20),
           Text(
             '= ?',
             style: TextStyle(
-              fontSize: 32,
+              fontSize: 40,
               fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
+              color: Theme.of(context).colorScheme.secondary,
             ),
           ),
         ],
@@ -790,8 +728,333 @@ class _NumbersTo10ScreenState extends State<NumbersTo10Screen> {
     );
   }
 
+  void _initializeActivities() {
+    setState(() {
+      activities = [
+        NumberActivity(
+          title: 'Introduction to Numbers 1-5',
+          description: 'Learn the first five numbers with interactive counting',
+          visual: _buildCountingVisual(5),
+          instruction: 'Count along with the objects and learn their names',
+          options: ['1', '2', '3', '4', '5'],
+        ),
+        NumberActivity(
+          title: 'Numbers 6-10',
+          description: 'Continue learning with numbers 6 through 10',
+          visual: _buildCountingVisual(10),
+          instruction: 'Practice counting from 6 to 10',
+          options: ['6', '7', '8', '9', '10'],
+        ),
+        NumberActivity(
+          title: 'Number Sequence',
+          description: 'Learn the order of numbers from 1 to 10',
+          visual: _buildNumberLine(),
+          instruction: 'Follow the number line and learn the sequence',
+          options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+        ),
+        NumberActivity(
+          title: 'Number Names',
+          description: 'Learn how to write and say numbers in words',
+          visual: _buildNumberWords(),
+          instruction: 'Match the numbers with their written names',
+          options: ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'],
+        ),
+        NumberActivity(
+          title: 'Number Relationships',
+          description: 'Learn about numbers that come before and after',
+          visual: _buildBeforeAfterVisual(5),
+          instruction: 'Identify numbers that come before and after',
+          options: ['4', '5', '6'],
+        ),
+        NumberActivity(
+          title: 'Comparing Numbers',
+          description: 'Learn to compare numbers using greater than and less than',
+          visual: _buildComparisonVisual(3, 7),
+          instruction: 'Which number is greater?',
+          options: ['3', '7'],
+        ),
+        NumberActivity(
+          title: 'Number Patterns',
+          description: 'Discover patterns in numbers from 1 to 10',
+          visual: _buildPatternVisual(),
+          instruction: 'Find the pattern and continue the sequence',
+          options: ['2', '4', '6', '8', '10'],
+        ),
+      ];
+    });
+  }
+
+  Widget _buildCountingVisual(int count) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        count,
+        (index) => Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                '${index + 1}',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNumberLine() {
+    return Container(
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(
+          11,
+          (index) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 2,
+                height: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$index',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNumberWords() {
+    return Wrap(
+      spacing: 16,
+      runSpacing: 16,
+      alignment: WrapAlignment.center,
+      children: List.generate(
+        10,
+        (index) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            ),
+          ),
+          child: Text(
+            _getNumberWord(index + 1),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBeforeAfterVisual(int number) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildNumberBox(number - 1, 'Before'),
+        const SizedBox(width: 16),
+        _buildNumberBox(number, 'Current'),
+        const SizedBox(width: 16),
+        _buildNumberBox(number + 1, 'After'),
+      ],
+    );
+  }
+
+  Widget _buildNumberBox(int number, String label) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary,
+              width: 2,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              '$number',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildComparisonVisual(int smaller, int larger) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildComparisonBox(smaller, 'Smaller'),
+        const SizedBox(width: 24),
+        Icon(
+          Icons.arrow_forward,
+          color: Theme.of(context).colorScheme.primary,
+          size: 32,
+        ),
+        const SizedBox(width: 24),
+        _buildComparisonBox(larger, 'Larger'),
+      ],
+    );
+  }
+
+  Widget _buildComparisonBox(int number, String label) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary,
+              width: 2,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              '$number',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.bold,
+                fontSize: 32,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getNumberWord(int number) {
+    final words = [
+      'One', 'Two', 'Three', 'Four', 'Five',
+      'Six', 'Seven', 'Eight', 'Nine', 'Ten'
+    ];
+    return words[number - 1];
+  }
+
+  Color _getOptionColor(bool isSelected, bool isCorrect, bool isIncorrect) {
+    if (isCorrect) {
+      return Colors.green.withOpacity(0.9);
+    } else if (isIncorrect) {
+      return Colors.red.withOpacity(0.9);
+    } else if (isSelected) {
+      return Theme.of(context).colorScheme.primary.withOpacity(0.9);
+    } else {
+      return Theme.of(context).colorScheme.primary.withOpacity(0.7);
+    }
+  }
+
+  Widget _buildPatternVisual() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            5,
+            (index) => Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    '${(index + 1) * 2}',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Even Numbers Pattern',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   void dispose() {
+    _animationController.dispose();
     flutterTts.stop();
     super.dispose();
   }

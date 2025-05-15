@@ -38,6 +38,9 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
   late Animation<double> _animation;
   late AnimationController _resultAnimationController;
   late Animation<double> _resultAnimation;
+  late AnimationController _answerAnimationController;
+  late Animation<double> _answerAnimation;
+  Color _answerColor = Colors.transparent;
 
   final List<MathProblem> problems = [
     MathProblem(
@@ -277,6 +280,16 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
         curve: Curves.easeOutBack,
       ),
     );
+    _answerAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _answerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _answerAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
     _startGame();
   }
 
@@ -310,18 +323,32 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
       selectedAnswer = answer;
       showResult = true;
       isCorrect = answer == shuffledProblems[currentQuestion].correctAnswer;
+      _answerColor = isCorrect ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3);
+      _answerAnimationController.reset();
+      _answerAnimationController.forward();
+      
       if (isCorrect) {
         score++;
-        _animationController.reset();
-        _animationController.forward();
-        _speakText('Yay! You got it right! ${shuffledProblems[currentQuestion].correctAnswer} is correct!');
+        _speakText('Correct!');
       } else {
-        _speakText('Oops! Try again! Think about the ${shuffledProblems[currentQuestion].category.toLowerCase()}');
+        _speakText('Try again!');
       }
 
       // Save score if this is the last question
       if (currentQuestion == shuffledProblems.length - 1) {
-        GameProgressService.saveGameScore('math_play', score, shuffledProblems.length);
+        GameProgressService.saveGameProgress('play', score, shuffledProblems.length);
+      }
+
+      // Automatically move to next question after a short delay
+      if (currentQuestion < shuffledProblems.length - 1) {
+        Future.delayed(const Duration(seconds: 1), () {
+          _nextQuestion();
+        });
+      } else {
+        // Show final results after a short delay
+        Future.delayed(const Duration(seconds: 1), () {
+          _showFinalResults();
+        });
       }
     });
   }
@@ -334,12 +361,11 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
         showResult = false;
         _animationController.reset();
         _animationController.forward();
-        _speakText('Great job! Let\'s try another one!');
+        _speakText('Next question!');
       } else {
         showFinalResults = true;
-        _resultAnimationController.reset();
-        _resultAnimationController.forward();
-        _speakText('Wow! You finished the game! You got $score out of ${shuffledProblems.length} correct! You\'re amazing!');
+        _speakText('You completed the game!');
+        _showFinalResults();
       }
     });
   }
@@ -349,6 +375,139 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
       showFinalResults = false;
       _startGame();
     });
+  }
+
+  void _showFinalResults() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.emoji_events,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Game Over!',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Score: $score/${shuffledProblems.length}',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _getResultMessage(),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _restartGame();
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Play Again'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.home),
+                      label: const Text('Main Menu'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _getResultMessage() {
+    final percentage = (score / shuffledProblems.length) * 100;
+    if (percentage >= 90) {
+      return 'Excellent! You\'re a math superstar! 🌟';
+    } else if (percentage >= 70) {
+      return 'Great job! You\'re doing amazing! 👍';
+    } else if (percentage >= 50) {
+      return 'Good work! Keep practicing! 💪';
+    } else {
+      return 'Keep trying! You\'ll get better! 🎯';
+    }
   }
 
   @override
@@ -444,47 +603,70 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
             const SizedBox(height: 16),
             Column(
               children: shuffledProblems[currentQuestion].options.map((option) {
+                final isSelected = option == selectedAnswer;
+                final isCorrectAnswer = option == shuffledProblems[currentQuestion].correctAnswer;
+                
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: ScaleTransition(
-                    scale: _animation,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: showResult ? null : () => _checkAnswer(option),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: showResult
-                              ? (option == selectedAnswer
-                                  ? (isCorrect ? Colors.green : Colors.red)
-                                  : (option == shuffledProblems[currentQuestion].correctAnswer
-                                      ? Colors.green
-                                      : null))
-                          : null,
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  child: AnimatedBuilder(
+                    animation: _answerAnimation,
+                    builder: (context, child) {
+                      return Container(
+                        decoration: showResult && isSelected
+                            ? BoxDecoration(
+                                color: isCorrect ? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isCorrect ? Colors.green : Colors.red,
+                                  width: 2,
+                                ),
+                              )
+                            : null,
+                        child: ScaleTransition(
+                          scale: _animation,
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: showResult ? null : () => _checkAnswer(option),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: showResult
+                                    ? (isSelected
+                                        ? (isCorrect ? Colors.green : Colors.red)
+                                        : (isCorrectAnswer && showResult
+                                            ? Colors.green
+                                            : null))
+                                    : null,
+                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    option,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                  if (showResult && isSelected) ...[
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      isCorrect ? Icons.check_circle : Icons.cancel,
+                                      color: isCorrect ? Colors.green : Colors.red,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                        child: Text(
-                          option,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
-            if (showResult)
-              ScaleTransition(
-                scale: _animation,
-                child: ElevatedButton(
-                  onPressed: _nextQuestion,
-                  child: Text(
-                    currentQuestion < shuffledProblems.length - 1 ? 'Next Question' : 'Finish Game',
-                  ),
-                ),
-              ),
-            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -555,23 +737,11 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
     );
   }
 
-  String _getResultMessage() {
-    final percentage = (score / shuffledProblems.length) * 100;
-    if (percentage >= 90) {
-      return 'Excellent! You\'re a math superstar! 🌟';
-    } else if (percentage >= 70) {
-      return 'Great job! You\'re doing amazing! 👍';
-    } else if (percentage >= 50) {
-      return 'Good work! Keep practicing! 💪';
-    } else {
-      return 'Keep trying! You\'ll get better! 🎯';
-    }
-  }
-
   @override
   void dispose() {
     _animationController.dispose();
     _resultAnimationController.dispose();
+    _answerAnimationController.dispose();
     flutterTts.stop();
     super.dispose();
   }

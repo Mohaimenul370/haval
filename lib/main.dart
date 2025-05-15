@@ -12,12 +12,14 @@ import 'screens/fractions_screen.dart';
 import 'screens/fractions_2_screen.dart';
 import 'screens/measures_screen.dart';
 import 'screens/numbers_to_10_screen.dart';
+import 'screens/numbers_to_10_chapter_screen.dart';
+import 'screens/numbers_to_20_screen.dart';
+import 'screens/numbers_to_20_chapter_screen.dart';
 import 'screens/positions_screen.dart';
 import 'screens/statistics_screen.dart';
 import 'screens/time_screen.dart';
 import 'screens/geometry_2_screen.dart';
 import 'screens/measures_2_screen.dart';
-import 'screens/numbers_to_20_screen.dart';
 import 'screens/statistics_2_screen.dart';
 import 'screens/time_2_screen.dart';
 import 'screens/position_patterns_2_screen.dart';
@@ -89,8 +91,12 @@ class MyApp extends StatelessWidget {
       ),
       home: const HomeScreen(),
       routes: {
-        '/numbers': (context) => const NumbersTo10Screen(),
-        '/reading': (context) => const NumbersTo20Screen(),
+        '/numbers': (context) => const NumbersTo10ChapterScreen(),
+        '/numbers_to_10_learn': (context) => const NumbersTo10Screen(isGameMode: false),
+        '/numbers_to_10_game': (context) => const NumbersTo10Screen(isGameMode: true),
+        '/numbers_to_20': (context) => const NumbersTo20ChapterScreen(),
+        '/numbers_to_20_learn': (context) => const NumbersTo20Screen(isGameMode: false),
+        '/numbers_to_20_game': (context) => const NumbersTo20Screen(isGameMode: true),
         '/shapes': (context) => const ShapesScreen(),
         '/vocab': (context) => const AlphabetScreen(), // Replace with your vocab screen if different
         '/analysis': (context) => const StatisticsScreen(), // Replace with your analysis screen if different
@@ -385,7 +391,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       title: 'Number 20',
                       subtitle: 'Número 20',
                       onTap: () async {
-                        await Navigator.pushNamed(context, '/reading');
+                        await Navigator.pushNamed(context, '/numbers_to_20');
                         if (mounted) _loadScores();
                       },
                     ),
