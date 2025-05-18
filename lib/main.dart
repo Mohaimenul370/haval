@@ -20,7 +20,7 @@ import 'screens/statistics_screen.dart';
 import 'screens/time_screen.dart';
 import 'screens/geometry_2_screen.dart';
 import 'screens/measures_2_screen.dart';
-import 'screens/statistics_2_screen.dart';
+import 'screens/statistics_2_chapter_screen.dart';
 import 'screens/time_2_screen.dart';
 import 'screens/position_patterns_2_screen.dart';
 import 'screens/play_screen.dart';
@@ -29,6 +29,11 @@ import 'package:flutter/services.dart';
 import 'package:kg_education_app/services/hive_service.dart';
 import 'widgets/menu_card.dart';
 import 'screens/settings_screen.dart';
+import 'screens/shapes_chapter_screen.dart';
+import 'screens/fractions_chapter_screen.dart';
+import 'screens/fractions_2_chapter_screen.dart';
+import 'screens/measures_chapter_screen.dart';
+import 'screens/time_chapter_screen.dart';
 
 void main() async {
   try {
@@ -97,23 +102,29 @@ class MyApp extends StatelessWidget {
         '/numbers_to_20': (context) => const NumbersTo20ChapterScreen(),
         '/numbers_to_20_learn': (context) => const NumbersTo20Screen(isGameMode: false),
         '/numbers_to_20_game': (context) => const NumbersTo20Screen(isGameMode: true),
-        '/shapes': (context) => const ShapesScreen(),
+        '/shapes': (context) => const ShapesChapterScreen(),
         '/vocab': (context) => const AlphabetScreen(), // Replace with your vocab screen if different
         '/analysis': (context) => const StatisticsScreen(), // Replace with your analysis screen if different
         '/settings': (context) => const SettingsScreen(), // Replace with your settings screen if you have one
-        '/fractions': (context) => const FractionsScreen(),
-        '/measures': (context) => const MeasuresScreen(),
-        '/time': (context) => const TimeScreen(),
+        '/fractions': (context) => const FractionsChapterScreen(),
+        '/fractions_2': (context) => const Fractions2ChapterScreen(),
+        '/fractions_2_learn': (context) => const Fractions2Screen(isGameMode: false),
+        '/fractions_2_game': (context) => const Fractions2Screen(isGameMode: true),
+        '/measures': (context) => const MeasuresChapterScreen(),
+        '/measures_learn': (context) => const MeasuresScreen(isGameMode: false),
+        '/measures_game': (context) => const MeasuresScreen(isGameMode: true),
+        '/time': (context) => const TimeChapterScreen(),
+        '/time_learn': (context) => const TimeScreen(isGameMode: false),
+        '/time_game': (context) => const TimeScreen(isGameMode: true),
         '/statistics': (context) => const StatisticsScreen(),
         '/position_patterns_2': (context) => const PositionPatterns2Screen(),
         '/geometry': (context) => const GeometryScreen(),
         '/geometry_2': (context) => const Geometry2Screen(),
         '/time_2': (context) => const Time2Screen(),
-        '/statistics_2': (context) => const Statistics2Screen(),
+        '/statistics_2': (context) => const Statistics2ChapterScreen(),
         '/positions': (context) => const PositionsScreen(),
         '/measures_2': (context) => const Measures2Screen(),
         '/play': (context) => const PlayScreen(),
-        '/fractions_2': (context) => const Fractions2Screen(),
       },
     );
   }

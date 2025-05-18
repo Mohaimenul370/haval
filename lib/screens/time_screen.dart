@@ -20,15 +20,19 @@ class TimeConcept {
 }
 
 class TimeScreen extends StatefulWidget {
-  const TimeScreen({super.key});
+  final bool isGameMode;
+
+  const TimeScreen({
+    super.key,
+    required this.isGameMode,
+  });
 
   @override
   State<TimeScreen> createState() => _TimeScreenState();
 }
 
-class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateMixin {
+class _TimeScreenState extends State<TimeScreen> with TickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
-  bool isGameMode = false;
   int score = 0;
   int currentQuestion = 0;
   String? selectedAnswer;
@@ -36,7 +40,10 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
   bool isCorrect = false;
   List<TimeConcept> shuffledConcepts = [];
   late AnimationController _animationController;
-  late Animation<double> _animation;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  late AnimationController _answerAnimationController;
+  late Animation<double> _answerScaleAnimation;
   bool _isLoading = true;
 
   final List<TimeConcept> concepts = [
@@ -88,16 +95,8 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _initializeTts();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
-    );
+    _initializeAnimation();
+    _initializeAnswerAnimation();
     _initializeStorage();
   }
 
@@ -132,11 +131,10 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
       setState(() {
         score = savedScore;
         currentQuestion = savedQuestion;
-        isGameMode = savedGameMode;
         _isLoading = false;
       });
 
-      if (isGameMode) {
+      if (widget.isGameMode) {
         _startGame();
       }
     } catch (e) {
@@ -151,7 +149,7 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
     try {
       await PreferenceService.setInt('time_score', score);
       await PreferenceService.setInt('time_question', currentQuestion);
-      await PreferenceService.setBool('time_game_mode', isGameMode);
+      await PreferenceService.setBool('time_game_mode', widget.isGameMode);
     } catch (e) {
       developer.log('Error saving game state: $e');
     }
@@ -159,7 +157,6 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
 
   void _startGame() {
     setState(() {
-      isGameMode = true;
       score = 0;
       currentQuestion = 0;
       selectedAnswer = null;
@@ -173,133 +170,84 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
     });
   }
 
+  void _initializeAnimation() {
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeIn,
+    ));
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    ));
+    _animationController.forward();
+  }
+
+  void _initializeAnswerAnimation() {
+    _answerAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _answerScaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.1,
+    ).animate(CurvedAnimation(
+      parent: _answerAnimationController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
   void _checkAnswer(String answer) {
     setState(() {
       selectedAnswer = answer;
       showResult = true;
       isCorrect = answer == shuffledConcepts[currentQuestion].name;
+      // Play answer animation
+      _answerAnimationController.forward().then((_) {
+        _answerAnimationController.reverse();
+      });
       if (isCorrect) {
         score++;
-        _animationController.reset();
-        _animationController.forward();
-        _speakText('Yay! You got it right! ${shuffledConcepts[currentQuestion].name} is correct!');
+        _speakText('Yay! You got it right! \\${shuffledConcepts[currentQuestion].name} is correct!');
       } else {
         _speakText('Oops! Try again! Think about the time of day');
       }
-
-      // Save score if this is the last question
-      if (currentQuestion == shuffledConcepts.length - 1) {
-        SharedPreferenceService.saveGameProgress('time', score, shuffledConcepts.length);
-      }
     });
-  }
-
-  void _nextQuestion() async {
-    setState(() {
+    // Automatically go to next question or show completion dialog
+    Future.delayed(const Duration(milliseconds: 900), () {
       if (currentQuestion < shuffledConcepts.length - 1) {
-        currentQuestion++;
-        selectedAnswer = null;
-        showResult = false;
-        _animationController.reset();
-        _animationController.forward();
-        _speakText('Great job! Let\'s try another one!');
+        setState(() {
+          currentQuestion++;
+          selectedAnswer = null;
+          showResult = false;
+          _animationController.reset();
+          _animationController.forward();
+        });
+        _speakText('Next question!');
       } else {
-        isGameMode = false;
-        _speakText('Wow! You finished the game! You got $score out of ${shuffledConcepts.length} correct! You\'re amazing!');
         _showGameCompletionDialog();
       }
     });
-    await _saveGameState();
-  }
-
-  void _showGameCompletionDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            'Game Completed!',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.emoji_events,
-                size: 64,
-                color: Colors.amber,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Your Score: $score/${shuffledConcepts.length}',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                score >= shuffledConcepts.length / 2
-                    ? 'Great job! You passed the game!'
-                    : 'Keep practicing! You can do better!',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: score >= shuffledConcepts.length / 2
-                      ? Colors.green
-                      : Colors.orange,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          actions: [
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Return to home screen
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Finish Game',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(isGameMode ? 'Time Game' : 'Learn Time'),
+        title: Text(widget.isGameMode ? 'Time Game' : 'Learn Time'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         actions: [
-          if (!isGameMode)
+          if (!widget.isGameMode)
             IconButton(
               icon: const Icon(Icons.games),
               onPressed: _startGame,
@@ -318,23 +266,21 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
             ],
           ),
         ),
-        child: isGameMode ? _buildGameMode() : _buildLearningMode(),
+        child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
       ),
     );
   }
 
   Widget _buildGameMode() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxHeight < 600;
-        final isNarrowScreen = constraints.maxWidth < 360;
-        
-        return SingleChildScrollView(
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SlideTransition(
+          position: _slideAnimation,
           child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: isNarrowScreen ? 8.0 : 16.0,
-              vertical: isSmallScreen ? 8.0 : 16.0,
-            ),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -345,9 +291,9 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
                     children: [
                       Flexible(
                         child: Text(
-                          'Question ${currentQuestion + 1}/${shuffledConcepts.length}',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 12 : 14,
+                          'Question \\${currentQuestion + 1}/\\${shuffledConcepts.length}',
+                          style: const TextStyle(
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -360,24 +306,21 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
                           value: (currentQuestion + 1) / shuffledConcepts.length,
                           backgroundColor: Colors.grey.withOpacity(0.2),
                           valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                          minHeight: isSmallScreen ? 6 : 8,
+                          minHeight: 8,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 6 : 8,
-                          vertical: isSmallScreen ? 2 : 4,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
-                          'Score: $score',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 10 : 12,
+                          'Score: \\${score}',
+                          style: const TextStyle(
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -386,25 +329,21 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
                     ],
                   ),
                 ),
-                SizedBox(height: isSmallScreen ? 12 : 20),
+                const SizedBox(height: 20),
                 // Question
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    shuffledConcepts[currentQuestion].description,
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 16 : 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                    textAlign: TextAlign.center,
+                Text(
+                  shuffledConcepts[currentQuestion].description,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.secondary,
                   ),
+                  textAlign: TextAlign.center,
                 ),
-                SizedBox(height: isSmallScreen ? 12 : 20),
+                const SizedBox(height: 20),
                 // Visual
                 Container(
-                  height: isSmallScreen ? 150 : 200,
+                  height: 200,
                   width: double.infinity,
                   alignment: Alignment.center,
                   child: FittedBox(
@@ -412,125 +351,69 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
                     child: shuffledConcepts[currentQuestion].visual,
                   ),
                 ),
-                SizedBox(height: isSmallScreen ? 16 : 24),
+                const SizedBox(height: 24),
                 // Answer options
                 ...shuffledConcepts[currentQuestion].options.map((option) {
                   final isSelected = selectedAnswer == option;
-                  final isCorrect = showResult && option == shuffledConcepts[currentQuestion].name;
+                  final isCorrectOption = showResult && option == shuffledConcepts[currentQuestion].name;
                   final isIncorrect = showResult && isSelected && option != shuffledConcepts[currentQuestion].name;
                   
                   Color backgroundColor;
-                  if (isCorrect) {
-                    backgroundColor = Colors.green.shade100;
+                  if (isCorrectOption) {
+                    backgroundColor = Colors.green.withOpacity(0.9);
                   } else if (isIncorrect) {
-                    backgroundColor = Colors.red.shade100;
+                    backgroundColor = Colors.red.withOpacity(0.9);
                   } else if (isSelected) {
-                    backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.2);
+                    backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.9);
                   } else {
-                    backgroundColor = Colors.white;
+                    backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.7);
                   }
 
-                  Color borderColor;
-                  if (isCorrect) {
-                    borderColor = Colors.green;
-                  } else if (isIncorrect) {
-                    borderColor = Colors.red;
-                  } else if (isSelected) {
-                    borderColor = Theme.of(context).colorScheme.primary;
-                  } else {
-                    borderColor = Colors.grey.shade300;
-                  }
-
-                  return Container(
-                    margin: EdgeInsets.only(
-                      bottom: isSmallScreen ? 6 : 8,
-                      left: isNarrowScreen ? 4 : 0,
-                      right: isNarrowScreen ? 4 : 0,
-                    ),
-                    child: Material(
-                      borderRadius: BorderRadius.circular(12),
-                      elevation: isSelected ? 4 : 1,
-                      child: InkWell(
-                        onTap: showResult ? null : () => _checkAnswer(option),
+                  return ScaleTransition(
+                    scale: (isSelected && showResult) ? _answerScaleAnimation : const AlwaysStoppedAnimation(1.0),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: Material(
                         borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.symmetric(
-                            vertical: isSmallScreen ? 8 : 12,
-                            horizontal: isSmallScreen ? 12 : 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color: backgroundColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: borderColor,
-                              width: 2,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  option,
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 12 : 14,
-                                    fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
+                        elevation: isSelected ? 4 : 1,
+                        color: backgroundColor,
+                        child: InkWell(
+                          onTap: showResult ? null : () => _checkAnswer(option),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    option,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 2,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
                                 ),
-                              ),
-                              if (isCorrect)
-                                Icon(
-                                  Icons.check_circle,
-                                  color: Colors.green,
-                                  size: isSmallScreen ? 16 : 20,
-                                )
-                              else if (isIncorrect)
-                                Icon(
-                                  Icons.cancel,
-                                  color: Colors.red,
-                                  size: isSmallScreen ? 16 : 20,
-                                ),
-                            ],
+                                if (isCorrectOption)
+                                  const Icon(Icons.check_circle, color: Colors.white, size: 24)
+                                else if (isIncorrect)
+                                  const Icon(Icons.cancel, color: Colors.white, size: 24),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   );
                 }).toList(),
-                SizedBox(height: isSmallScreen ? 12 : 20),
-                // Next button
-                if (showResult)
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: _nextQuestion,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 24 : 32,
-                          vertical: isSmallScreen ? 12 : 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        currentQuestion < shuffledConcepts.length - 1 ? 'Next Question' : 'Finish Game',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 14 : 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                SizedBox(height: isSmallScreen ? 8 : 16),
               ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -602,52 +485,6 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
                       ),
                     );
                   }).toList(),
-
-                  const SizedBox(height: 24),
-
-                  // Practice Section
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Ready to Practice?',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Test your understanding by playing the game! You\'ll need to:',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text('• Identify different times of the day'),
-                          const Text('• Match times with their descriptions'),
-                          const Text('• Understand time concepts'),
-                          const Text('• Get at least half the questions right to complete the game'),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: ElevatedButton.icon(
-                              onPressed: _startGame,
-                              icon: const Icon(Icons.games),
-                              label: const Text('Start Game'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -657,10 +494,131 @@ class _TimeScreenState extends State<TimeScreen> with SingleTickerProviderStateM
     );
   }
 
+  void _showGameCompletionDialog() {
+    final percentage = (score / shuffledConcepts.length) * 100;
+    final isPassed = percentage >= 50.0;
+    SharedPreferenceService.saveGameProgress('time', score, shuffledConcepts.length);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with Icon
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isPassed 
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isPassed ? Icons.emoji_events : Icons.school,
+                  size: 48,
+                  color: isPassed ? Colors.green : Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Title
+              Text(
+                isPassed ? 'Congratulations!' : 'Keep Practicing!',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: isPassed ? Colors.green : Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Score Display
+              Text(
+                'Score: $score/${shuffledConcepts.length} (${percentage.toStringAsFixed(1)}%)',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Message
+              Text(
+                isPassed
+                  ? 'You\'ve completed the Time practice!'
+                  : 'You\'re making progress! Keep practicing to improve.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
+                      Navigator.of(context).pop(); // Return to home screen
+                    },
+                    icon: const Icon(Icons.home),
+                    label: const Text('Go to Home'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  if (isPassed)
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // Close dialog
+                        _startGame(); // Start new game
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Play Again'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.secondary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     flutterTts.stop();
     _animationController.dispose();
+    _answerAnimationController.dispose();
     super.dispose();
   }
 } 
