@@ -3,6 +3,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:developer' as developer;
 import '../services/preference_service.dart';
 import '../services/shared_preference_service.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 class Measure {
   final String name;
@@ -23,15 +25,16 @@ class Measure {
 }
 
 class Measures2Screen extends StatefulWidget {
-  const Measures2Screen({super.key});
+  final bool isGameMode;
+  const Measures2Screen({super.key, required this.isGameMode});
 
   @override
   State<Measures2Screen> createState() => _Measures2ScreenState();
 }
 
-class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProviderStateMixin {
+class _Measures2ScreenState extends State<Measures2Screen> with TickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
-  bool isGameMode = false;
+  late bool isGameMode;
   int score = 0;
   int currentQuestion = 0;
   String? selectedAnswer;
@@ -40,6 +43,10 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
   List<Measure> shuffledMeasures = [];
   late AnimationController _animationController;
   late Animation<double> _animation;
+  late AnimationController _answerAnimationController;
+  late Animation<double> _answerScaleAnimation;
+  List<String> _currentOptions = [];
+  Map<String, String?> _answerStatus = {};
 
   final List<Measure> measures = [
     Measure(
@@ -112,6 +119,7 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
   static Widget _buildLengthComparisonVisual() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           width: 100,
@@ -131,6 +139,7 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
   static Widget _buildHeightComparisonVisual() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           width: 20,
@@ -150,8 +159,11 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
   static Widget _buildWeightComparisonVisual() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Icon(Icons.book, size: 40, color: Colors.brown),
             const Text('Heavy'),
@@ -159,6 +171,8 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
         ),
         const SizedBox(width: 20),
         Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Icon(Icons.air, size: 40, color: Colors.grey),
             const Text('Light'),
@@ -171,6 +185,7 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
   static Widget _buildCapacityComparisonVisual() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           width: 40,
@@ -196,8 +211,11 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
   static Widget _buildTimeComparisonVisual() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Icon(Icons.timer, size: 40, color: Colors.purple),
             const Text('Longer'),
@@ -205,6 +223,8 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
         ),
         const SizedBox(width: 20),
         Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Icon(Icons.timer_3, size: 40, color: Colors.purple),
             const Text('Shorter'),
@@ -218,6 +238,7 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
   void initState() {
     super.initState();
     _initializeTts();
+    isGameMode = widget.isGameMode;
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -228,6 +249,25 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
         curve: Curves.easeInOut,
       ),
     );
+    _answerAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _answerScaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _answerAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    // Initialize shuffledMeasures and options if starting in game mode
+    if (isGameMode) {
+      shuffledMeasures = List.from(measures)..shuffle();
+      for (var measure in shuffledMeasures) {
+        measure.options.shuffle();
+      }
+      _currentOptions = List.from(shuffledMeasures[0].options);
+      _answerStatus = { for (var o in _currentOptions) o: null };
+    }
   }
 
   Future<void> _initializeTts() async {
@@ -242,7 +282,6 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
 
   void _startGame() {
     setState(() {
-      isGameMode = true;
       score = 0;
       currentQuestion = 0;
       selectedAnswer = null;
@@ -251,6 +290,8 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
       for (var measure in shuffledMeasures) {
         measure.options.shuffle();
       }
+      _currentOptions = List.from(shuffledMeasures[0].options);
+      _answerStatus = { for (var o in _currentOptions) o: null };
       _animationController.reset();
       _animationController.forward();
     });
@@ -261,6 +302,20 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
       selectedAnswer = answer;
       showResult = true;
       isCorrect = answer == shuffledMeasures[currentQuestion].example;
+      // Start answer animation
+      _answerAnimationController.forward().then((_) {
+        _answerAnimationController.reverse();
+      });
+      // Set answer status for all options
+      for (var o in _currentOptions) {
+        if (o == shuffledMeasures[currentQuestion].example) {
+          _answerStatus[o] = 'correct';
+        } else if (o == answer) {
+          _answerStatus[o] = 'incorrect';
+        } else {
+          _answerStatus[o] = null;
+        }
+      }
       if (isCorrect) {
         score++;
         _animationController.reset();
@@ -269,138 +324,77 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
       } else {
         _speakText('Oops! Try again! Think about the measurement');
       }
-
-      // Save score if this is the last question
       if (currentQuestion == shuffledMeasures.length - 1) {
         SharedPreferenceService.saveGameProgress('measures_2', score, shuffledMeasures.length);
+      }
+      if (currentQuestion < shuffledMeasures.length - 1) {
+        Future.delayed(const Duration(milliseconds: 700), () {
+          _nextQuestion();
+        });
+      } else {
+        Future.delayed(const Duration(milliseconds: 700), () {
+          _showCompletionDialog();
+        });
       }
     });
   }
 
-  void _nextQuestion() async {
+  void _nextQuestion() {
+    setState(() {
     if (currentQuestion < shuffledMeasures.length - 1) {
-      setState(() {
         currentQuestion++;
         selectedAnswer = null;
         showResult = false;
-      });
-      _speakText('Next question!');
+        _currentOptions = List.from(shuffledMeasures[currentQuestion].options);
+        _answerStatus = { for (var o in _currentOptions) o: null };
     } else {
-      // Save game progress using SharedPreferenceService
-      await SharedPreferenceService.saveGameProgress('measures_2', score, shuffledMeasures.length);
-      
-      // Show completion dialog
-      if (!mounted) return;
-      
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return WillPopScope(
-            onWillPop: () async => false,
-            child: AlertDialog(
-              title: Text(
-                score >= shuffledMeasures.length / 2 ? 'Congratulations!' : 'Keep Practicing!',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Container(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (score >= shuffledMeasures.length / 2)
-                      const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                        size: 64,
-                      ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Your score: $score out of ${shuffledMeasures.length}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    if (score >= shuffledMeasures.length / 2)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: Text(
-                          'You completed this section!',
-                          style: TextStyle(
-                            color: Colors.green,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              actions: [
-                Center(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close dialog
-                      Navigator.of(context).pop(); // Return to home screen
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Go to Home',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    }
+        SharedPreferenceService.saveGameProgress('measures_2', score, shuffledMeasures.length);
+        _showCompletionDialog();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF6A1B9A),
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF6A1B9A),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(isGameMode ? 'Measures-2 Game' : 'Learn Measures-2'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          if (!isGameMode)
-            IconButton(
-              icon: const Icon(Icons.games),
-              onPressed: _startGame,
-              tooltip: 'Start Game',
-            ),
-        ],
+        backgroundColor: const Color(0xFF7B2FF2),
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          widget.isGameMode ? 'Measures-2 Game' : 'Learn Measures-2',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Color(0xFF7B2FF2),
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: Color(0xFF7B2FF2),
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.3),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-            ],
+            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
           ),
         ),
         child: SafeArea(
-          child: isGameMode ? _buildGameMode() : _buildLearningMode(),
+          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
         ),
       ),
     );
@@ -530,8 +524,9 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
   }
 
   Widget _buildGameMode() {
-    return SingleChildScrollView(
-      child: Padding(
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -598,42 +593,46 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
               height: 200,
               width: double.infinity,
               alignment: Alignment.center,
-              child: FittedBox(
-                fit: BoxFit.contain,
+            child: Center(
                 child: shuffledMeasures[currentQuestion].visual,
               ),
             ),
             const SizedBox(height: 24),
             // Answer options
-            ...shuffledMeasures[currentQuestion].options.map((option) {
+          ..._currentOptions.map((option) {
+            final status = _answerStatus[option];
               final isSelected = selectedAnswer == option;
-              final isCorrect = showResult && option == shuffledMeasures[currentQuestion].example;
-              final isIncorrect = showResult && isSelected && option != shuffledMeasures[currentQuestion].example;
-              
               Color backgroundColor;
-              if (isCorrect) {
-                backgroundColor = Colors.green.shade100;
-              } else if (isIncorrect) {
-                backgroundColor = Colors.red.shade100;
+            Color borderColor;
+            Color textColor = Colors.black;
+            Widget? trailingIcon;
+            if (status == 'correct') {
+              backgroundColor = Colors.green;
+              borderColor = Colors.green.shade800;
+              textColor = Colors.white;
+              trailingIcon = const Icon(Icons.check_circle, color: Colors.white, size: 20);
+            } else if (status == 'incorrect') {
+              backgroundColor = Colors.red;
+              borderColor = Colors.red.shade800;
+              textColor = Colors.white;
+              trailingIcon = const Icon(Icons.cancel, color: Colors.white, size: 20);
               } else if (isSelected) {
                 backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.2);
+              borderColor = Theme.of(context).colorScheme.primary;
               } else {
                 backgroundColor = Colors.white;
-              }
-
-              Color borderColor;
-              if (isCorrect) {
-                borderColor = Colors.green;
-              } else if (isIncorrect) {
-                borderColor = Colors.red;
-              } else if (isSelected) {
-                borderColor = Theme.of(context).colorScheme.primary;
-              } else {
                 borderColor = Colors.grey.shade300;
               }
-
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
+              child: AnimatedBuilder(
+                animation: _answerAnimationController,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: isSelected ? _answerScaleAnimation.value : 1.0,
+                    child: child,
+                  );
+                },
                 child: Material(
                   borderRadius: BorderRadius.circular(12),
                   elevation: isSelected ? 4 : 1,
@@ -658,38 +657,151 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
                               option,
                               style: TextStyle(
                                 fontSize: 14,
-                                fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
+                                color: textColor,
+                                fontWeight: isSelected || status == 'correct' ? FontWeight.bold : FontWeight.normal,
                               ),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 2,
                             ),
                           ),
-                          if (isCorrect)
-                            const Icon(Icons.check_circle, color: Colors.green, size: 20)
-                          else if (isIncorrect)
-                            const Icon(Icons.cancel, color: Colors.red, size: 20),
+                          if (trailingIcon != null) trailingIcon,
                         ],
+                      ),
                       ),
                     ),
                   ),
                 ),
               );
             }).toList(),
-            const SizedBox(height: 20),
-            // Next button
-            if (showResult)
-              ElevatedButton(
-                onPressed: _nextQuestion,
+          // No Next button
+        ],
+      ),
+    );
+  }
+
+  void _showCompletionDialog() {
+    final percentage = (score / shuffledMeasures.length) * 100;
+    final isPassed = percentage >= 50.0;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with Icon
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isPassed 
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isPassed ? Icons.emoji_events : Icons.school,
+                  size: 48,
+                  color: isPassed ? Colors.green : Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Title
+              Text(
+                isPassed ? 'Congratulations!' : 'Keep Practicing!',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: isPassed ? Colors.green : Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Score Display
+              Text(
+                'Score: $score/${shuffledMeasures.length} (${percentage.toStringAsFixed(1)}%)',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Message
+              Text(
+                isPassed
+                  ? 'You\'ve completed the Measures-2 practice!'
+                  : 'You\'re making progress! Keep practicing to improve.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              // Buttons
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
+                      Navigator.of(context).pop(); // Return to home screen
+                    },
+                    icon: const Icon(Icons.home),
+                    label: const Text('Go to Home'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                ),
-                child: Text(
-                  currentQuestion < shuffledMeasures.length - 1 ? 'Next Question' : 'Finish Game',
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
+                      setState(() {
+                        score = 0;
+                        currentQuestion = 0;
+                        showResult = false;
+                        selectedAnswer = null;
+                        shuffledMeasures = List.from(measures)..shuffle();
+                        for (var measure in shuffledMeasures) {
+                          measure.options.shuffle();
+                        }
+                      });
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Play Again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                 ),
               ),
           ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -698,6 +810,7 @@ class _Measures2ScreenState extends State<Measures2Screen> with SingleTickerProv
   @override
   void dispose() {
     _animationController.dispose();
+    _answerAnimationController.dispose();
     flutterTts.stop();
     super.dispose();
   }

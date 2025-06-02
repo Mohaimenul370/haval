@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:developer' as developer;
 import '../services/shared_preference_service.dart';
+import 'package:flutter/services.dart';
+import 'package:kg_education_app/screens/measures_2_screen.dart';
+import 'package:kg_education_app/screens/statistics_screen.dart';
+import 'package:kg_education_app/screens/positions_screen.dart';
 
 class GeometryConcept {
   final String name;
@@ -17,15 +21,32 @@ class GeometryConcept {
   });
 }
 
+class GeometryGameQuestion {
+  final String question;
+  final String correctAnswer;
+  final List<String> options;
+  final Widget? visual;
+
+  GeometryGameQuestion({
+    required this.question,
+    required this.correctAnswer,
+    required this.options,
+    this.visual,
+  });
+}
+
 class Geometry2Screen extends StatefulWidget {
-  const Geometry2Screen({super.key});
+  final bool isGameMode;
+  const Geometry2Screen({super.key, required this.isGameMode});
 
   @override
   State<Geometry2Screen> createState() => _Geometry2ScreenState();
 }
 
-class _Geometry2ScreenState extends State<Geometry2Screen> {
+class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
   bool _isLoading = false;  // Set to false since we don't need to load game state initially
   bool _isGameMode = false;  // Initialize as false to show lesson mode first
   int _score = 0;
@@ -33,6 +54,7 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
   bool _showResult = false;
   String? _selectedAnswer;
   bool isCorrect = false;
+  bool _isAnswering = false;  // Add this to prevent multiple taps
   
   // Game progress data
   bool _hasExistingProgress = false;
@@ -70,6 +92,39 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
       description: 'Shapes that have length, width, and height',
       visual: _build3DShapesVisual(),
       example: 'A cube has 6 square faces',
+    ),
+  ];
+
+  final List<GeometryGameQuestion> geometryGameQuestions = [
+    GeometryGameQuestion(
+      question: 'What is shown in this shape?',
+      correctAnswer: 'Symmetry',
+      options: ['Circle', 'Symmetry', 'Square', 'Angle'],
+      visual: _buildSymmetryVisual(),
+    ),
+    GeometryGameQuestion(
+      question: 'What is shown in this shape?',
+      correctAnswer: 'Angle',
+      options: ['Line', 'Circle', 'Angle', 'Square'],
+      visual: _buildAnglesVisual(),
+    ),
+    GeometryGameQuestion(
+      question: 'What is shown around this shape?',
+      correctAnswer: 'Perimeter',
+      options: ['Area', 'Line', 'Perimeter', 'Angle'],
+      visual: _buildPerimeterVisual(),
+    ),
+    GeometryGameQuestion(
+      question: 'What is shown inside this shape?',
+      correctAnswer: 'Area',
+      options: ['Line', 'Area', 'Perimeter', 'Angle'],
+      visual: _buildAreaVisual(),
+    ),
+    GeometryGameQuestion(
+      question: 'What type of shape is shown?',
+      correctAnswer: '3D Shape',
+      options: ['2D Shape', 'Line', 'Angle', '3D Shape'],
+      visual: _build3DShapesVisual(),
     ),
   ];
 
@@ -184,7 +239,28 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
   void initState() {
     super.initState();
     _initializeTts();
-    // Remove _loadGameProgress() call to ensure lesson mode is shown first
+    _initializeAnimation();
+    if (widget.isGameMode) {
+      _isGameMode = true;
+      _score = 0;
+      _currentQuestion = 0;
+      _showResult = false;
+      _selectedAnswer = null;
+      _options = _getRandomOptions(concepts[_currentQuestion]);
+    }
+  }
+
+  void _initializeAnimation() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
   }
 
   Future<void> _initializeTts() async {
@@ -252,10 +328,20 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
   }
 
   void _checkAnswer(String answer) {
+    if (_isAnswering) return;  // Prevent multiple taps
+    _isAnswering = true;
+
     setState(() {
       _selectedAnswer = answer;
       _showResult = true;
       isCorrect = answer == concepts[_currentQuestion].name;
+    });
+
+    // Start animation
+    _animationController.forward().then((_) {
+      _animationController.reverse();
+    });
+
       if (isCorrect) {
         _score++;
         _speakText('Correct! ${concepts[_currentQuestion].description}');
@@ -268,31 +354,20 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
         SharedPreferenceService.saveGameProgress('geometry_2', _score, concepts.length);
       }
 
-      // Automatically move to next question after a short delay
+    // Move to next question after animation
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (!mounted) return;
+      
       if (_currentQuestion < concepts.length - 1) {
-        Future.delayed(const Duration(seconds: 1), () {
-          _nextQuestion();
-        });
-      } else {
-        // Show completion dialog after a short delay
-        Future.delayed(const Duration(seconds: 1), () {
-          _showCompletionDialog();
-        });
-      }
-    });
-  }
-
-  void _nextQuestion() {
-    setState(() {
-      if (_currentQuestion < concepts.length - 1) {
+        setState(() {
         _currentQuestion++;
         _selectedAnswer = null;
         _showResult = false;
-        _options = _getRandomOptions(concepts[_currentQuestion]); // Update options for the new question
+          _isAnswering = false;
+          _options = _getRandomOptions(concepts[_currentQuestion]);
+        });
         _speakText('Next question!');
       } else {
-        // Save final score and show completion dialog
-        SharedPreferenceService.saveGameProgress('geometry_2', _score, concepts.length);
         _showCompletionDialog();
       }
     });
@@ -321,8 +396,27 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
     return options;
   }
 
+  Color _getOptionColor(bool isSelected, bool isCorrect, bool isIncorrect) {
+    if (isCorrect) {
+      return Colors.green.withOpacity(0.9);
+    } else if (isIncorrect) {
+      return Colors.red.withOpacity(0.9);
+    } else if (isSelected) {
+      return Theme.of(context).colorScheme.primary.withOpacity(0.9);
+    } else {
+      return Theme.of(context).colorScheme.primary.withOpacity(0.7);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF6A1B9A),
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF6A1B9A),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
+
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
@@ -333,34 +427,39 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
         ),
       );
     }
-    
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(_isGameMode ? 'Geometry Game' : 'Advanced Geometry'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          if (!_isGameMode)
-            IconButton(
-              icon: const Icon(Icons.games),
-              onPressed: _startGame,
-              tooltip: 'Start Game',
-            ),
-        ],
+        backgroundColor: const Color(0xFF6A1B9A),
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          widget.isGameMode ? 'Geometry Game' : 'Learn Geometry',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Color(0xFF6A1B9A),
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: Color(0xFF6A1B9A),
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.3),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-            ],
+            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
           ),
         ),
         child: SafeArea(
-          child: _isGameMode ? _buildGameMode() : _buildLearningMode(),
+          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
         ),
       ),
     );
@@ -369,13 +468,13 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
   Widget _buildLearningMode() {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
           child: Text(
-            'Learn Advanced Geometry',
+            'Learn Geometry',
             style: TextStyle(
               fontSize: 24,
-              color: Theme.of(context).colorScheme.primary,
+              color: Color(0xFF6A1B9A),
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
@@ -387,100 +486,38 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Introduction
-                  Text(
-                    'Understanding Advanced Geometry',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Let\'s learn about advanced geometric concepts:',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Geometry Concepts
-                  ...concepts.map((concept) {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              concept.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Center(
-                              child: concept.visual,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              concept.description,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-
-                  const SizedBox(height: 24),
-
-                  // Practice Section
-                  Card(
+                children: concepts.map((concept) {
+                  return Card(
+                    color: Colors.white,
                     margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Ready to Practice?',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
+                          Center(child: concept.visual),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Test your understanding by playing the game! You\'ll need to:',
-                            style: TextStyle(fontSize: 16),
+                          Text(
+                            concept.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF6A1B9A),
+                            ),
                           ),
                           const SizedBox(height: 8),
-                          const Text('• Identify different geometric concepts'),
-                          const Text('• Match concepts with their descriptions'),
-                          const Text('• Understand advanced geometry properties'),
-                          const Text('• Get at least half the questions right to complete the game'),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: ElevatedButton.icon(
-                              onPressed: _startGame,
-                              icon: const Icon(Icons.games),
-                              label: const Text('Start Game'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              ),
-                            ),
+                          Text(
+                            concept.description,
+                            style: const TextStyle(fontSize: 16, color: Color(0xFF6A1B9A)),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
             ),
           ),
@@ -490,239 +527,194 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
   }
 
   Widget _buildGameMode() {
-    // Game completed view
-    if (_currentQuestion >= concepts.length) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.celebration,
-            size: 80,
-            color: Colors.amber,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Game Completed!',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Your final score: $_score out of ${concepts.length}',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 40),
-          Text(
-            'Completion: ${(_score / concepts.length * 100).toStringAsFixed(1)}%',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: _score == concepts.length ? Colors.green : Colors.orange,
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: MediaQuery.of(context).size.width * 0.8,
-            child: LinearProgressIndicator(
-              value: _score / concepts.length,
-              backgroundColor: Colors.grey.withOpacity(0.2),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                _score == concepts.length ? Colors.green : Colors.orange,
+    if (_isGameCompleted) {
+      // Show popup dialog instead of full screen
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
-              minHeight: 10,
-              borderRadius: BorderRadius.circular(5),
-            ),
-          ),
-          const SizedBox(height: 40),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _isGameMode = false;
-                  });
-                },
-                icon: const Icon(Icons.book),
-                label: const Text('Learning Mode'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
-                  foregroundColor: Colors.white,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.emoji_events,
+                      color: Color(0xFF6A1B9A),
+                      size: 64,
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Quiz Finished!',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF6A1B9A),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Your score: $_score / ${geometryGameQuestions.length}',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        color: Color(0xFF6A1B9A),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop(); // Close dialog
+                            setState(() {
+                              _currentQuestion = 0;
+                              _score = 0;
+                              _selectedAnswer = null;
+                              _showResult = false;
+                              _isGameCompleted = false;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6A1B9A),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
+                          child: const Text('Play Again'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop(); // Close dialog
+                            Navigator.of(context).pop(); // Return to main menu
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey[300],
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
+                          child: const Text(
+                            'Main Menu',
+                            style: TextStyle(color: Colors.black87),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 20),
-              ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _score = 0;
-                    _currentQuestion = 0;
-                    _showResult = false;
-                    _selectedAnswer = null;
-                  });
-                  _saveGameState();
-                },
-                icon: const Icon(Icons.replay),
-                label: const Text('Play Again'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ],
-      );
+            );
+          },
+        );
+      });
+      // Return empty container while dialog is showing
+      return const SizedBox.shrink();
     }
 
-    // Current game question view
-    final concept = concepts[_currentQuestion];
-    // Use stored options
-    final options = _options;
-
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Progress bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Row(
-                children: [
-                  Text(
-                    'Question ${_currentQuestion + 1}/${concepts.length}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value: (_currentQuestion + 1) / concepts.length,
-                      backgroundColor: Colors.grey.withOpacity(0.2),
-                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                      minHeight: 8,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      'Score: $_score',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Question
-            Text(
-              'What is this geometric concept?',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.secondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            // Visual
+    final q = geometryGameQuestions[_currentQuestion];
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Question ${_currentQuestion + 1} of ${geometryGameQuestions.length}',
+            style: const TextStyle(fontSize: 18, color: Color(0xFF6A1B9A)),
+          ),
+          const SizedBox(height: 16),
+          if (q.visual != null)
             Container(
-              height: 120,
-              width: double.infinity,
-              alignment: Alignment.center,
-              child: concept.visual,
+              height: 200,
+              width: 200,
+              child: q.visual,
             ),
-            const SizedBox(height: 32),
-            // Answer options
-            ...options.map((option) {
-              final isSelected = _selectedAnswer == option;
-              final isCorrect = _showResult && option == concept.name;
-              final isIncorrect = _showResult && isSelected && option != concept.name;
-              
-              Color backgroundColor;
-              if (isCorrect) {
-                backgroundColor = Colors.green.shade100;
-              } else if (isIncorrect) {
-                backgroundColor = Colors.red.shade100;
-              } else if (isSelected) {
-                backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.2);
-              } else {
-                backgroundColor = Colors.white;
-              }
-
-              Color borderColor;
-              if (isCorrect) {
-                borderColor = Colors.green;
-              } else if (isIncorrect) {
-                borderColor = Colors.red;
-              } else if (isSelected) {
-                borderColor = Theme.of(context).colorScheme.primary;
-              } else {
-                borderColor = Colors.grey.shade300;
-              }
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Material(
-                  borderRadius: BorderRadius.circular(12),
-                  elevation: isSelected ? 4 : 1,
-                  child: InkWell(
-                    onTap: _showResult ? null : () => _checkAnswer(option),
+          const SizedBox(height: 16),
+          Text(
+            q.question,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ...q.options.map((option) {
+            final isSelected = _selectedAnswer == option;
+            final isCorrect = _showResult && option == q.correctAnswer;
+            final isIncorrect = _showResult && isSelected && option != q.correctAnswer;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                transform: Matrix4.identity()
+                  ..scale(_showResult && (isCorrect || isIncorrect) ? 1.05 : 1.0),
+                child: Card(
+                  elevation: _showResult && (isCorrect || isIncorrect) ? 8 : 2,
+                  color: isCorrect
+                      ? Colors.green.shade100
+                      : isIncorrect
+                          ? Colors.red.shade100
+                          : Colors.white,
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: backgroundColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: borderColor,
-                          width: 2,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              option,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
-                              ),
-                            ),
-                          ),
-                          if (isCorrect)
-                            const Icon(Icons.check_circle, color: Colors.green)
-                          else if (isIncorrect)
-                            const Icon(Icons.cancel, color: Colors.red),
-                        ],
+                    side: BorderSide(
+                      color: isCorrect
+                          ? Colors.green
+                          : isIncorrect
+                              ? Colors.red
+                              : Colors.grey.shade300,
+                      width: _showResult && (isCorrect || isIncorrect) ? 2 : 1,
+                    ),
+                  ),
+                  child: ListTile(
+                    title: Text(
+                      option,
+                      style: TextStyle(
+                        color: isCorrect
+                            ? Colors.green.shade900
+                            : isIncorrect
+                                ? Colors.red.shade900
+                                : Colors.black87,
+                        fontWeight: _showResult && (isCorrect || isIncorrect)
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
+                    trailing: _showResult && (isCorrect || isIncorrect)
+                        ? Icon(
+                            isCorrect ? Icons.check_circle : Icons.cancel,
+                            color: isCorrect ? Colors.green : Colors.red,
+                          )
+                        : null,
+                    onTap: _showResult || _selectedAnswer != null
+                        ? null
+                        : () {
+                            setState(() {
+                              _selectedAnswer = option;
+                              _showResult = true;
+                              if (option == q.correctAnswer) _score++;
+                            });
+                            // Move to next question after animation
+                            Future.delayed(const Duration(milliseconds: 500), () {
+                              if (_currentQuestion < geometryGameQuestions.length - 1) {
+                                setState(() {
+                                  _currentQuestion++;
+                                  _selectedAnswer = null;
+                                  _showResult = false;
+                                });
+                              } else {
+                                setState(() {
+                                  _isGameCompleted = true;
+                                });
+                              }
+                            });
+                          },
                   ),
                 ),
-              );
-            }).toList(),
-          ],
-        ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -731,53 +723,135 @@ class _Geometry2ScreenState extends State<Geometry2Screen> {
     final percentage = (_score / concepts.length) * 100;
     final isPassed = percentage >= 50.0;
     
+    // Save game progress
+    SharedPreferenceService.saveGameProgress('geometry_2', _score, concepts.length);
+    
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(isPassed ? 'Congratulations!' : 'Keep Practicing!'),
-        content: Column(
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isPassed)
-              const Icon(
-                Icons.check_circle,
-                color: Colors.green,
+              // Header with Icon
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isPassed 
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isPassed ? Icons.emoji_events : Icons.school,
                 size: 48,
-              ),
-            const SizedBox(height: 16),
-            Text(
-              'Your score: $_score out of ${concepts.length}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            if (isPassed)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text(
-                  'You completed this section!',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  color: isPassed ? Colors.green : Colors.orange,
                 ),
               ),
-          ],
-        ),
-        actions: [
-          TextButton(
+              const SizedBox(height: 24),
+              // Title
+              Text(
+                isPassed ? 'Congratulations!' : 'Keep Practicing!',
+                  style: TextStyle(
+                  fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  color: isPassed ? Colors.green : Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Score Display
+              Text(
+                'Score: $_score/${concepts.length} (${percentage.toStringAsFixed(1)}%)',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Message
+              Text(
+                isPassed
+                  ? 'You\'ve completed the Geometry-2 practice!'
+                  : 'You\'re making progress! Keep practicing to improve.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              // Buttons
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton.icon(
             onPressed: () {
               Navigator.of(context).pop(); // Close dialog
               Navigator.of(context).pop(); // Return to home screen
             },
-            child: const Text('Go to Home'),
+                    icon: const Icon(Icons.home),
+                    label: const Text('Go to Home'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  if (isPassed)
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // Close dialog
+                        setState(() {
+                          _score = 0;
+                          _currentQuestion = 0;
+                          _showResult = false;
+                          _selectedAnswer = null;
+                          _options = _getRandomOptions(concepts[_currentQuestion]);
+                        });
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Play Again'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.secondary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
     flutterTts.stop();
     super.dispose();
   }

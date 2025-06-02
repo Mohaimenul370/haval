@@ -579,7 +579,7 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
                     children: [
                       AspectRatio(
                         aspectRatio: 1.5,
-                        child: SingleChildScrollView(
+                        child: Center(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8.0),
                             child: shuffledProblems[currentQuestion].visual,

@@ -6,6 +6,7 @@ import '../services/shared_preference_service.dart';
 import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math' as math;
+import 'package:flutter/services.dart';
 
 class FractionActivity {
   final String title;
@@ -549,26 +550,38 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF6A1B9A),
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF6A1B9A),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
     return Scaffold(
       backgroundColor: const Color(0xFFF8F5F2),
       appBar: AppBar(
-        title: Text(isGameMode ? 'Fractions Game' : 'Learn Fractions'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        title: Text(
+          widget.isGameMode ? 'Fractions Practice' : 'Learn Fractions',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        backgroundColor: Color(0xFF7B2FF2),
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-            ],
+            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
           ),
         ),
         child: SafeArea(
-          child: isGameMode ? _buildGameMode() : _buildLearningMode(),
+          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
         ),
       ),
     );

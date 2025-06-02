@@ -3,6 +3,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:developer' as developer;
 import '../services/preference_service.dart';
 import '../services/shared_preference_service.dart';
+import 'package:flutter/services.dart';
 
 class MeasureConcept {
   final String name;
@@ -329,18 +330,26 @@ class _MeasuresScreenState extends State<MeasuresScreen> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF6A1B9A),
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF6A1B9A),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F5F2),
       appBar: AppBar(
         title: Text(
           widget.isGameMode ? 'Measures Practice' : 'Learn Measures',
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
+            fontSize: 20,
           ),
         ),
-        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.9),
+        backgroundColor: Color(0xFF7B2FF2),
         elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SafeArea(
         child: FadeTransition(
@@ -348,14 +357,11 @@ class _MeasuresScreenState extends State<MeasuresScreen> with TickerProviderStat
           child: SlideTransition(
             position: _slideAnimation,
             child: Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                    Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                  ],
+                  colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
                 ),
               ),
               child: widget.isGameMode ? _buildGameContent() : _buildLearningContent(),
@@ -387,6 +393,7 @@ class _MeasuresScreenState extends State<MeasuresScreen> with TickerProviderStat
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
+                          color: Color(0xFF7B2FF2),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -397,25 +404,7 @@ class _MeasuresScreenState extends State<MeasuresScreen> with TickerProviderStat
                       child: LinearProgressIndicator(
                         value: (currentQuestion + 1) / shuffledConcepts.length,
                         backgroundColor: Colors.grey.withOpacity(0.2),
-                        valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        'Score: $score',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF7B2FF2)),
                       ),
                     ),
                   ],
@@ -424,22 +413,21 @@ class _MeasuresScreenState extends State<MeasuresScreen> with TickerProviderStat
               const SizedBox(height: 20),
               // Question
               Text(
-                shuffledConcepts[currentQuestion].description,
-                style: TextStyle(
+                'What is this measure?',
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.secondary,
+                  color: Color(0xFF7B2FF2),
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
               // Visual
               Container(
-                height: 200,
+                height: 100,
                 width: double.infinity,
                 alignment: Alignment.center,
-                child: FittedBox(
-                  fit: BoxFit.contain,
+                child: Center(
                   child: shuffledConcepts[currentQuestion].visual,
                 ),
               ),
@@ -448,27 +436,31 @@ class _MeasuresScreenState extends State<MeasuresScreen> with TickerProviderStat
               ...shuffledConcepts[currentQuestion].options.map((option) {
                 final isSelected = selectedAnswer == option;
                 final isCorrectOption = showResult && option == shuffledConcepts[currentQuestion].name;
-                final isIncorrect = showResult && isSelected && option != shuffledConcepts[currentQuestion].name;
-                
+                final isIncorrect = showResult && isSelected && !isCorrect;
                 Color backgroundColor;
                 if (isCorrectOption) {
                   backgroundColor = Colors.green.withOpacity(0.9);
                 } else if (isIncorrect) {
                   backgroundColor = Colors.red.withOpacity(0.9);
                 } else if (isSelected) {
-                  backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.9);
+                  backgroundColor = const Color(0xFF7B2FF2).withOpacity(0.9);
                 } else {
-                  backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.7);
+                  backgroundColor = const Color(0xFF7B2FF2).withOpacity(0.7);
                 }
-
                 return ScaleTransition(
                   scale: (isSelected && showResult) ? _answerScaleAnimation : const AlwaysStoppedAnimation(1.0),
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
                     margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: backgroundColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Material(
                       borderRadius: BorderRadius.circular(12),
                       elevation: isSelected ? 4 : 1,
-                      color: backgroundColor,
+                      color: Colors.transparent,
                       child: InkWell(
                         onTap: showResult ? null : () => _checkAnswer(option),
                         borderRadius: BorderRadius.circular(12),
@@ -485,8 +477,7 @@ class _MeasuresScreenState extends State<MeasuresScreen> with TickerProviderStat
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                               if (isCorrectOption)
@@ -515,9 +506,9 @@ class _MeasuresScreenState extends State<MeasuresScreen> with TickerProviderStat
           padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
           child: Text(
             'Learn Measures',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 24,
-              color: Theme.of(context).colorScheme.primary,
+              color: Color(0xFF7B2FF2),
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
@@ -529,54 +520,35 @@ class _MeasuresScreenState extends State<MeasuresScreen> with TickerProviderStat
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Introduction
-                  Text(
-                    'Understanding Measures',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Let\'s learn about different measures:',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Measure Concepts
-                  ...concepts.map((measure) {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              measure.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
+                children: concepts.map((concept) {
+                  return Card(
+                    color: Colors.white,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            concept.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF7B2FF2),
                             ),
-                            const SizedBox(height: 12),
-                            Center(
-                              child: measure.visual,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              measure.description,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 12),
+                          Center(child: concept.visual),
+                          const SizedBox(height: 12),
+                          Text(
+                            concept.description,
+                            style: const TextStyle(fontSize: 16, color: Color(0xFF7B2FF2)),
+                          ),
+                        ],
                       ),
-                    );
-                  }).toList(),
-                ],
+                    ),
+                  );
+                }).toList(),
               ),
             ),
           ),

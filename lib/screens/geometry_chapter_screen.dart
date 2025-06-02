@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'numbers_to_10_screen.dart';
 
-class NumbersTo10ChapterScreen extends StatelessWidget {
-  const NumbersTo10ChapterScreen({super.key});
+class GeometryChapterScreen extends StatelessWidget {
+  const GeometryChapterScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +12,7 @@ class NumbersTo10ChapterScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          'Learning Numbers to 10',
+          'Learning Geometry',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -55,7 +54,7 @@ class NumbersTo10ChapterScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 32),
               const Text(
-                'Numbers to 10',
+                'Geometry',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -74,16 +73,10 @@ class NumbersTo10ChapterScreen extends StatelessWidget {
               const SizedBox(height: 32),
               _buildModeCard(
                 context,
-                'Learn Numbers',
+                'Learn Geometry',
                 Icons.menu_book,
                 'Interactive lessons and tutorials',
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const NumbersTo10Screen(isGameMode: false),
-                    fullscreenDialog: true,
-                  ),
-                ),
+                () => Navigator.pushNamed(context, '/geometry/learn'),
               ),
               const SizedBox(height: 20),
               _buildModeCard(
@@ -91,13 +84,7 @@ class NumbersTo10ChapterScreen extends StatelessWidget {
                 'Practice Game',
                 Icons.videogame_asset,
                 'Fun games to test your knowledge',
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const NumbersTo10Screen(isGameMode: true),
-                    fullscreenDialog: true,
-                  ),
-                ),
+                () => Navigator.pushNamed(context, '/geometry/game'),
               ),
               const Spacer(),
               Opacity(

@@ -3,6 +3,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:developer' as developer;
 import '../services/preference_service.dart';
 import '../services/shared_preference_service.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 class StatisticsConcept {
   final String name;
@@ -476,24 +478,47 @@ class _Statistics2ScreenState extends State<Statistics2Screen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(isGameMode ? 'Statistics Game' : 'Learn Statistics'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          widget.isGameMode ? 'Statistics Game' : 'Learn Statistics',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Color(0xFF7B2FF2),
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: Color(0xFF7B2FF2),
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF7B2FF2), Color(0xFFf357a8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.3),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-            ],
+            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
           ),
         ),
         child: SafeArea(
-          child: isGameMode ? _buildGameMode() : _buildLearningMode(),
+          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
         ),
       ),
     );
@@ -506,85 +531,51 @@ class _Statistics2ScreenState extends State<Statistics2Screen> with SingleTicker
           padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
           child: Text(
             'Learn Statistics',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 24,
-              color: Theme.of(context).colorScheme.primary,
+              color: Color(0xFF7B2FF2),
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: concepts.length,
-            itemBuilder: (context, index) {
-              final concept = concepts[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: InkWell(
-                  onTap: () => _handleConceptTap(concept, index),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                'Lesson ${index + 1}',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: concepts.map((concept) {
+                  return Card(
+                    color: Colors.white,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            concept.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF7B2FF2),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                concept.name,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          concept.description,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        concept.visual,
-                        const SizedBox(height: 16),
-                        Text(
-                          'Example: ${concept.example}',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w500,
+                          const SizedBox(height: 12),
+                          Center(child: concept.visual),
+                          const SizedBox(height: 12),
+                          Text(
+                            concept.description,
+                            style: const TextStyle(fontSize: 16, color: Color(0xFF7B2FF2)),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-              );
-            },
+                  );
+                }).toList(),
+              ),
+            ),
           ),
         ),
       ],

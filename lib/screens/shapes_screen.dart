@@ -5,6 +5,7 @@ import '../services/preference_service.dart';
 import '../services/shared_preference_service.dart';
 import '../widgets/menu_card.dart';
 import 'dart:math';
+import 'package:flutter/services.dart';
 
 class ShapeQuestion {
   final String shape;
@@ -373,18 +374,46 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F5F2),
-      appBar: AppBar(
-        title: Text(isGameMode ? 'Shape Practice Game' : 'Learn Shapes'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Color(0xFF7B2FF2),
+        systemNavigationBarColor: Color(0xFF7B2FF2),
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarIconBrightness: Brightness.light,
       ),
-      body: isGameMode ? _buildGameMode() : _buildLearningMode(),
+      child: Scaffold(
+        backgroundColor: Color(0xFFF3EFFF),
+        appBar: AppBar(
+          title: Text(
+            widget.isGameMode ? 'Shapes Practice' : 'Learn Shapes',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          backgroundColor: Color(0xFF7B2FF2),
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
+            ),
+          ),
+          child: SafeArea(
+            child: widget.isGameMode ? _buildGameContent() : _buildLearningContent(),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildGameMode() {
+  Widget _buildGameContent() {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -465,15 +494,9 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
                 height: 200,
                 width: double.infinity,
                 decoration: BoxDecoration(
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.secondary.withOpacity(0.7),
-                      Theme.of(context).colorScheme.secondary.withOpacity(0.9),
-                    ],
-                  ),
+                  border: Border.all(color: Color(0xFF7B2FF2), width: 2),
                 ),
                 padding: const EdgeInsets.all(16),
                 alignment: Alignment.center,
@@ -549,7 +572,7 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildLearningMode() {
+  Widget _buildLearningContent() {
     return Column(
       children: [
         Expanded(

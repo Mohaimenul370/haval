@@ -3,6 +3,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:developer' as developer;
 import '../services/preference_service.dart';
 import '../services/shared_preference_service.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 class Statistic {
   final String name;
@@ -19,7 +21,9 @@ class Statistic {
 }
 
 class StatisticsScreen extends StatefulWidget {
-  const StatisticsScreen({super.key});
+  final bool isGameMode;
+
+  const StatisticsScreen({super.key, this.isGameMode = false});
 
   @override
   State<StatisticsScreen> createState() => _StatisticsScreenState();
@@ -27,16 +31,18 @@ class StatisticsScreen extends StatefulWidget {
 
 class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
-  bool isGameMode = false;
+  late bool isGameMode;
   int score = 0;
   int currentQuestion = 0;
   String? selectedAnswer;
   bool showResult = false;
   bool isCorrect = false;
-  List<Statistic> shuffledStatistics = [];
+  List<Statistic> gameQuestions = [];
   late AnimationController _animationController;
   late Animation<double> _animation;
+  late Animation<double> _scaleAnimation;
   bool _isLoading = true;
+  bool _isAnswering = false;
 
   final List<Statistic> statistics = [
     Statistic(
@@ -86,9 +92,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
   @override
   void initState() {
     super.initState();
-    _initializeTts();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -97,8 +102,20 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
         curve: Curves.easeInOut,
       ),
     );
-    _initializeStorage();
-    isGameMode = false;
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    isGameMode = widget.isGameMode;
+    _initializeTts();
+
+    if (isGameMode) {
+      _startGame(); // Always start fresh in game mode
+    } else {
+      _initializeStorage(); // Only restore state in learning mode
+    }
   }
 
   Future<void> _initializeTts() async {
@@ -158,161 +175,217 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
       currentQuestion = 0;
       selectedAnswer = null;
       showResult = false;
-      shuffledStatistics = List.from(statistics)..shuffle();
-      for (var statistic in shuffledStatistics) {
-        final options = List<String>.from(statistic.options);
-        options.shuffle();
-        statistic.options.clear();
-        statistic.options.addAll(options);
-      }
+      _isAnswering = false;
+
+      // Deep copy statistics for gameQuestions and shuffle both questions and options
+      gameQuestions = List<Statistic>.from(statistics.map((stat) =>
+        Statistic(
+          name: stat.name,
+          visual: stat.visual,
+          description: stat.description,
+          options: List<String>.from(stat.options)..shuffle(),
+        )
+      ))..shuffle();
+      // If you want to limit to 5 questions, uncomment the next line:
+      // gameQuestions = gameQuestions.take(5).toList();
+
       _animationController.reset();
       _animationController.forward();
     });
   }
 
   void _checkAnswer(String answer) {
+    if (_isAnswering) return;
+    _isAnswering = true;
+
     setState(() {
       selectedAnswer = answer;
       showResult = true;
-      isCorrect = answer == shuffledStatistics[currentQuestion].name;
-      if (isCorrect) {
-        score++;
-        _animationController.reset();
-        _animationController.forward();
-        _speakText('Yay! You got it right! ${shuffledStatistics[currentQuestion].name} is correct!');
-      } else {
-        _speakText('Oops! Try again! Think about the statistic');
-      }
-
-      // Save score if this is the last question
-      if (currentQuestion == shuffledStatistics.length - 1) {
-        SharedPreferenceService.saveGameProgress('statistics', score, shuffledStatistics.length);
-      }
+      isCorrect = answer == gameQuestions[currentQuestion].name;
+      if (isCorrect) score++;
     });
-  }
 
-  void _nextQuestion() async {
+    _animationController.forward().then((_) {
+      _animationController.reverse();
+    });
+
+      if (isCorrect) {
+      _speakText('Correct! ${gameQuestions[currentQuestion].name} is right!');
+      } else {
+      _speakText('Try again!');
+      }
+
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+      if (currentQuestion < gameQuestions.length - 1) {
     setState(() {
-      if (currentQuestion < shuffledStatistics.length - 1) {
         currentQuestion++;
         selectedAnswer = null;
         showResult = false;
+          _isAnswering = false;
+        });
         _animationController.reset();
         _animationController.forward();
-        _speakText('Great job! Let\'s try another one!');
       } else {
-        isGameMode = false;
-        _speakText('Wow! You finished the game! You got $score out of ${shuffledStatistics.length} correct! You\'re amazing!');
+        setState(() {
+          showResult = false;
+          _isAnswering = false;
+        });
         _showGameCompletionDialog();
       }
     });
-    await _saveGameState();
   }
 
   void _showGameCompletionDialog() {
+    final percentage = (score / gameQuestions.length) * 100;
+    final isPassed = percentage >= 50.0;
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
+      builder: (context) => Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           ),
-          title: Text(
-            'Game Completed!',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.emoji_events,
-                size: 64,
-                color: Colors.amber,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Your Score: $score/${shuffledStatistics.length}',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                score >= shuffledStatistics.length / 2
-                    ? 'Great job! You passed the game!'
-                    : 'Keep practicing! You can do better!',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: score >= shuffledStatistics.length / 2
-                      ? Colors.green
-                      : Colors.orange,
-                ),
-                textAlign: TextAlign.center,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
-          actions: [
-            Center(
-              child: ElevatedButton(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with Icon
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isPassed 
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isPassed ? Icons.emoji_events : Icons.school,
+                  size: 48,
+                  color: isPassed ? Colors.green : Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Title
+              Text(
+                isPassed ? 'Congratulations!' : 'Keep Practicing!',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: isPassed ? Colors.green : Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Score Display
+              Text(
+                'Score: $score/${gameQuestions.length} (${percentage.toStringAsFixed(1)}%)',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Message
+              Text(
+                isPassed
+                  ? 'You\'ve completed the Statistics practice!'
+                  : 'You\'re making progress! Keep practicing to improve.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              // Buttons
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).pop(); // Close dialog
                   Navigator.of(context).pop(); // Return to home screen
                 },
+                    icon: const Icon(Icons.home),
+                    label: const Text('Main Menu'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Finish Game',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
                   ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
+                      _startGame();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Play Again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
           ],
-        );
-      },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(isGameMode ? 'Statistics Game' : 'Learn Statistics'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          if (!isGameMode)
-            IconButton(
-              icon: const Icon(Icons.games),
-              onPressed: _startGame,
-              tooltip: 'Start Game',
-            ),
-        ],
+        backgroundColor: const Color(0xFF7B2FF2),
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          widget.isGameMode ? 'Statistics Game' : 'Learn Statistics',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Color(0xFF7B2FF2),
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: Color(0xFF7B2FF2),
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.3),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-            ],
+            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
           ),
         ),
         child: SafeArea(
@@ -323,213 +396,84 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
   }
 
   Widget _buildGameMode() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxHeight < 600;
-        final isNarrowScreen = constraints.maxWidth < 360;
-        
-        return SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: isNarrowScreen ? 8.0 : 16.0,
-              vertical: isSmallScreen ? 8.0 : 16.0,
-            ),
+    if (gameQuestions.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final currentQ = gameQuestions[currentQuestion];
+    final isSmallScreen = MediaQuery.of(context).size.height < 600;
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Progress bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          'Question ${currentQuestion + 1}/${shuffledStatistics.length}',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 12 : 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+          LinearProgressIndicator(
+            value: (currentQuestion + 1) / gameQuestions.length,
+            backgroundColor: Colors.grey[200],
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF7B2FF2)),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Question ${currentQuestion + 1} of ${gameQuestions.length}',
+            style: const TextStyle(fontSize: 16, color: Color(0xFF7B2FF2)),
                       ),
-                      const SizedBox(width: 8),
+          const SizedBox(height: 16),
                       Expanded(
                         flex: 2,
-                        child: LinearProgressIndicator(
-                          value: (currentQuestion + 1) / shuffledStatistics.length,
-                          backgroundColor: Colors.grey.withOpacity(0.2),
-                          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                          minHeight: isSmallScreen ? 6 : 8,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 6 : 8,
-                          vertical: isSmallScreen ? 2 : 4,
-                        ),
+            child: Center(child: currentQ.visual),
+          ),
+          Expanded(
+            flex: 3,
+            child: ListView.builder(
+              itemCount: currentQ.options.length,
+              itemBuilder: (context, index) {
+                final option = currentQ.options[index];
+                final isSelected = selectedAnswer == option;
+                final isCorrectAnswer = showResult && option == currentQ.name;
+                final isWrongAnswer = showResult && isSelected && option != currentQ.name;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          'Score: $score',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 10 : 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: isSmallScreen ? 12 : 20),
-                // Question
-                // Container(
-                //   width: double.infinity,
-                //   padding: const EdgeInsets.symmetric(horizontal: 16),
-                //   child: Text(
-                //     shuffledStatistics[currentQuestion].description,
-                //     style: TextStyle(
-                //       fontSize: isSmallScreen ? 16 : 20,
-                //       fontWeight: FontWeight.bold,
-                //       color: Theme.of(context).colorScheme.secondary,
-                //     ),
-                //     textAlign: TextAlign.center,
-                //   ),
-                // ),
-                SizedBox(height: isSmallScreen ? 12 : 20),
-                // Visual
-                Container(
-                  height: isSmallScreen ? 150 : 200,
-                  width: double.infinity,
-                  alignment: Alignment.center,
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    child: shuffledStatistics[currentQuestion].visual,
-                  ),
-                ),
-                SizedBox(height: isSmallScreen ? 16 : 24),
-                // Answer options
-                ...shuffledStatistics[currentQuestion].options.map((option) {
-                  final isSelected = selectedAnswer == option;
-                  final isCorrect = showResult && option == shuffledStatistics[currentQuestion].name;
-                  final isIncorrect = showResult && isSelected && option != shuffledStatistics[currentQuestion].name;
-                  
-                  Color backgroundColor;
-                  if (isCorrect) {
-                    backgroundColor = Colors.green.shade100;
-                  } else if (isIncorrect) {
-                    backgroundColor = Colors.red.shade100;
-                  } else if (isSelected) {
-                    backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.2);
-                  } else {
-                    backgroundColor = Colors.white;
-                  }
-
-                  Color borderColor;
-                  if (isCorrect) {
-                    borderColor = Colors.green;
-                  } else if (isIncorrect) {
-                    borderColor = Colors.red;
-                  } else if (isSelected) {
-                    borderColor = Theme.of(context).colorScheme.primary;
-                  } else {
-                    borderColor = Colors.grey.shade300;
-                  }
-
-                  return Container(
-                    margin: EdgeInsets.only(
-                      bottom: isSmallScreen ? 6 : 8,
-                      left: isNarrowScreen ? 4 : 0,
-                      right: isNarrowScreen ? 4 : 0,
-                    ),
-                    child: Material(
-                      borderRadius: BorderRadius.circular(12),
-                      elevation: isSelected ? 4 : 1,
-                      child: InkWell(
-                        onTap: showResult ? null : () => _checkAnswer(option),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.symmetric(
-                            vertical: isSmallScreen ? 8 : 12,
-                            horizontal: isSmallScreen ? 12 : 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color: backgroundColor,
+                      color: isCorrectAnswer
+                          ? Colors.green.withOpacity(0.2)
+                          : isWrongAnswer
+                              ? Colors.red.withOpacity(0.2)
+                              : isSelected
+                                  ? const Color(0xFF7B2FF2).withOpacity(0.1)
+                                  : Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: borderColor,
+                        color: isCorrectAnswer
+                            ? Colors.green
+                            : isWrongAnswer
+                                ? Colors.red
+                                : isSelected
+                                    ? const Color(0xFF7B2FF2)
+                                    : Colors.grey,
                               width: 2,
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  option,
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 12 : 14,
-                                    fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
-                                ),
-                              ),
-                              if (isCorrect)
-                                Icon(
-                                  Icons.check_circle,
-                                  color: Colors.green,
-                                  size: isSmallScreen ? 16 : 20,
-                                )
-                              else if (isIncorrect)
-                                Icon(
-                                  Icons.cancel,
-                                  color: Colors.red,
-                                  size: isSmallScreen ? 16 : 20,
-                                ),
-                            ],
-                          ),
-                        ),
+                    child: ListTile(
+                      onTap: showResult ? null : () => _checkAnswer(option),
+                      title: Text(option, style: const TextStyle(color: Color(0xFF7B2FF2))),
+                      trailing: showResult
+                          ? Icon(
+                              isCorrectAnswer
+                                  ? Icons.check_circle
+                                  : isWrongAnswer
+                                      ? Icons.cancel
+                                      : null,
+                              color: isCorrectAnswer ? Colors.green : Colors.red,
+                            )
+                          : null,
                       ),
                     ),
                   );
-                }).toList(),
-                SizedBox(height: isSmallScreen ? 12 : 20),
-                // Next button
-                if (showResult)
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: _nextQuestion,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 24 : 32,
-                          vertical: isSmallScreen ? 12 : 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        currentQuestion < shuffledStatistics.length - 1 ? 'Next Question' : 'Finish Game',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 14 : 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+              },
                   ),
-                SizedBox(height: isSmallScreen ? 8 : 16),
+          ),
               ],
             ),
-          ),
-        );
-      },
     );
   }
 
@@ -540,9 +484,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
           padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
           child: Text(
             'Learn Statistics',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 24,
-              color: Theme.of(context).colorScheme.primary,
+              color: Color(0xFF7B2FF2),
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
@@ -554,58 +498,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Introduction
-                  Text(
-                    'Understanding Statistics',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Let\'s learn about different statistical concepts:',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Statistics Concepts
-                  ...statistics.map((concept) {
+                children: statistics.map((statistic) {
                     return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              concept.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Center(
-                              child: concept.visual,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              concept.description,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-
-                  const SizedBox(height: 24),
-
-                  // Practice Section
-                  Card(
+                    color: Colors.white,
                     margin: const EdgeInsets.only(bottom: 16),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -613,41 +508,25 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Ready to Practice?',
-                            style: TextStyle(
-                              fontSize: 20,
+                            statistic.name,
+                            style: const TextStyle(
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
+                              color: Color(0xFF7B2FF2),
                             ),
                           ),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Test your understanding by playing the game! You\'ll need to:',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text('• Identify different statistical concepts'),
-                          const Text('• Match concepts with their names'),
-                          const Text('• Understand statistical properties'),
-                          const Text('• Get at least half the questions right to complete the game'),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: ElevatedButton.icon(
-                              onPressed: _startGame,
-                              icon: const Icon(Icons.games),
-                              label: const Text('Start Game'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              ),
-                            ),
+                          Center(child: statistic.visual),
+                          const SizedBox(height: 12),
+                          Text(
+                            statistic.description,
+                            style: const TextStyle(fontSize: 16, color: Color(0xFF7B2FF2)),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
             ),
           ),

@@ -8,142 +8,112 @@ class NumbersTo20ChapterScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F5F2),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
         title: const Text(
-          'Numbers to 20',
+          'Learning Numbers to 20',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
+            fontSize: 20,
           ),
         ),
-        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.9),
-        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () {},
+          ),
+        ],
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF7B2FF2), Color(0xFFf357a8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        width: double.infinity,
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-            ],
+            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 40),
-                // Header Section with Animation
-                ShaderMask(
-                  shaderCallback: (bounds) => LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.secondary,
-                    ],
-                  ).createShader(bounds),
-                  child: const Text(
-                    'Choose Your\nLearning Path',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      height: 1.2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 32),
+              const Text(
+                'Numbers to 20',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF7B2FF2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Choose your learning path',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF7B2FF2),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 32),
+              _buildModeCard(
+                context,
+                'Learn Numbers',
+                Icons.menu_book,
+                'Interactive lessons and tutorials',
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NumbersTo20Screen(isGameMode: false),
+                      fullscreenDialog: true,
                     ),
-                  ),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+              _buildModeCard(
+                context,
+                'Practice Game',
+                Icons.videogame_asset,
+                'Fun games to test your knowledge',
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NumbersTo20Screen(isGameMode: true),
+                      fullscreenDialog: true,
+                    ),
+                  );
+                },
+              ),
+              const Spacer(),
+              Opacity(
+                opacity: 0.08,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Icon(Icons.square, size: 100, color: Color(0xFF7B2FF2)),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Select a mode to begin your journey',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                  ),
-                ),
-                const SizedBox(height: 60),
-                // Mode Selection Cards
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildModeCard(
-                        context,
-                        'Learn Numbers',
-                        Icons.school,
-                        'Start your learning journey with interactive lessons',
-                        Colors.blue,
-                        () {
-                          developer.log('Navigating to Learn Numbers mode');
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const NumbersTo20Screen(isGameMode: false),
-                              fullscreenDialog: true,
-                            ),
-                          ).then((_) {
-                            developer.log('Returned from Learn Numbers mode');
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                      _buildModeCard(
-                        context,
-                        'Practice Game',
-                        Icons.games,
-                        'Test your knowledge with fun challenges',
-                        Colors.orange,
-                        () {
-                          developer.log('Navigating to Practice Game mode');
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const NumbersTo20Screen(isGameMode: true),
-                              fullscreenDialog: true,
-                            ),
-                          ).then((_) {
-                            developer.log('Returned from Practice Game mode');
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                // Footer with Decorative Element
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 24.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.star,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Choose a mode to begin your adventure!',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        Icons.star,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+            ],
           ),
         ),
       ),
@@ -154,62 +124,28 @@ class NumbersTo20ChapterScreen extends StatelessWidget {
     BuildContext context,
     String title,
     IconData icon,
-    String description,
-    Color color,
+    String subtitle,
     VoidCallback onTap,
   ) {
-    return Material(
-      elevation: 8,
-      shadowColor: color.withOpacity(0.3),
-      borderRadius: BorderRadius.circular(24),
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: InkWell(
-        onTap: () {
-          developer.log('Navigating to $title mode');
-          onTap();
-        },
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withOpacity(0.8),
-                color.withOpacity(0.9),
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.2),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
           child: Row(
             children: [
-              // Icon Container with Background
               Container(
-                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
-                    width: 2,
-                  ),
+                  color: const Color(0xFF7B2FF2).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 36,
-                ),
+                padding: const EdgeInsets.all(10),
+                child: Icon(icon, color: Color(0xFF7B2FF2), size: 28),
               ),
-              const SizedBox(width: 24),
-              // Content
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,36 +153,24 @@ class NumbersTo20ChapterScreen extends StatelessWidget {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        fontSize: 18,
+                        color: Color(0xFF7B2FF2),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Text(
-                      description,
-                      style: TextStyle(
+                      subtitle,
+                      style: const TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
-                        height: 1.5,
+                        color: Color(0xFF7B2FF2),
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
                 ),
               ),
-              // Add arrow indicator
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
+              const Icon(Icons.arrow_forward_ios, color: Color(0xFF7B2FF2), size: 18),
             ],
           ),
         ),

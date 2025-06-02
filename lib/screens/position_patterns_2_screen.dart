@@ -27,15 +27,16 @@ class PositionPatternConcept {
 }
 
 class PositionPatterns2Screen extends StatefulWidget {
-  const PositionPatterns2Screen({super.key});
+  final bool isGameMode;
+  const PositionPatterns2Screen({super.key, this.isGameMode = false});
 
   @override
   State<PositionPatterns2Screen> createState() => _PositionPatterns2ScreenState();
 }
 
-class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with SingleTickerProviderStateMixin {
+class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with TickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
-  bool isGameMode = false;
+  late bool isGameMode;
   int score = 0;
   int currentQuestion = 0;
   String? selectedAnswer;
@@ -44,6 +45,8 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
   List<PositionPatternConcept> shuffledConcepts = [];
   late AnimationController _animationController;
   late Animation<double> _animation;
+  late AnimationController _answerAnimationController;
+  late Animation<double> _answerScaleAnimation;
   bool _isLoading = true;
   
   // Maps to track game progress across different games
@@ -51,45 +54,6 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
   Map<String, bool> _gameCompleted = {};
 
   final List<PositionPatternConcept> concepts = [
-    PositionPatternConcept(
-      name: 'Up and Down',
-      description: 'Understanding up and down positions',
-      visual: _buildPositionVisual('⬆️', 'Up'),
-      example: 'Up',
-      options: [
-        'Up',
-        'Down',
-        'Left',
-        'Right',
-        'Middle',
-      ],
-    ),
-    PositionPatternConcept(
-      name: 'Left and Right',
-      description: 'Understanding left and right positions',
-      visual: _buildPositionVisual('⬅️', 'Left'),
-      example: 'Left',
-      options: [
-        'Left',
-        'Right',
-        'Up',
-        'Down',
-        'Middle',
-      ],
-    ),
-    PositionPatternConcept(
-      name: 'In Front and Behind',
-      description: 'Understanding front and back positions',
-      visual: _buildPositionVisual('👆', 'In Front'),
-      example: 'In Front',
-      options: [
-        'In Front',
-        'Behind',
-        'Left',
-        'Right',
-        'Middle',
-      ],
-    ),
     PositionPatternConcept(
       name: 'Color Patterns',
       description: 'Understanding color patterns',
@@ -142,6 +106,32 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
         '7',
       ],
     ),
+    PositionPatternConcept(
+      name: 'Between',
+      description: 'Understanding the concept of between',
+      visual: _buildPatternVisual(['🍎', '🍌', '🍊']),
+      example: '🍌',
+      options: [
+        '🍎',
+        '🍌',
+        '🍊',
+        '🍇',
+        '🍉',
+      ],
+    ),
+    PositionPatternConcept(
+      name: 'Inside and Outside',
+      description: 'Understanding inside and outside positions',
+      visual: _buildPatternVisual(['⬛️', '⚽️']), // e.g., ball inside a box
+      example: 'Inside',
+      options: [
+        'Inside',
+        'Outside',
+        'Above',
+        'Below',
+        'Next to',
+      ],
+    ),
   ];
 
   static Widget _buildPositionVisual(String emoji, String position) {
@@ -167,6 +157,7 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
   void initState() {
     super.initState();
     _initializeTts();
+    isGameMode = widget.isGameMode;
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -177,7 +168,25 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
         curve: Curves.easeInOut,
       ),
     );
+    _answerAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _answerScaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _answerAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
     _initializeStorage();
+
+    // FIX: If starting in game mode, initialize shuffledConcepts
+    if (isGameMode) {
+      shuffledConcepts = List.from(concepts)..shuffle();
+      for (var concept in shuffledConcepts) {
+        concept.options.shuffle();
+      }
+    }
   }
 
   Future<void> _initializeTts() async {
@@ -309,13 +318,11 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
     setState(() {
       selectedAnswer = answer;
       showResult = true;
-      
-      // Get the current concept from shuffledConcepts instead of concepts
       final currentConcept = shuffledConcepts[currentQuestion];
-      
-      // Check if the answer matches the example (correct answer)
       isCorrect = answer == currentConcept.example;
-      
+      _answerAnimationController.forward().then((_) {
+        _answerAnimationController.reverse();
+      });
       if (isCorrect) {
         score++;
         _animationController.reset();
@@ -324,10 +331,19 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
       } else {
         _speakText('Oops! Try again! Think about the ${currentConcept.name.toLowerCase()}');
       }
-
       // Save score if this is the last question
       if (currentQuestion == shuffledConcepts.length - 1) {
         SharedPreferenceService.saveGameProgress('position_patterns_2', score, shuffledConcepts.length);
+      }
+      // Add delay for animation/highlight
+      if (currentQuestion < shuffledConcepts.length - 1) {
+        Future.delayed(const Duration(milliseconds: 900), () {
+          _nextQuestion();
+        });
+      } else {
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          _showCompletionDialog();
+        });
       }
     });
   }
@@ -338,9 +354,7 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
         currentQuestion++;
         selectedAnswer = null;
         showResult = false;
-        _speakText('Next question!');
       } else {
-        // Save final score and show completion dialog
         SharedPreferenceService.saveGameProgress('position_patterns_2', score, shuffledConcepts.length);
         _showCompletionDialog();
       }
@@ -354,50 +368,125 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(isPassed ? 'Congratulations!' : 'Keep Practicing!'),
-        content: Column(
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isPassed)
-              const Icon(
-                Icons.check_circle,
-                color: Colors.green,
+              // Header with Icon
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isPassed 
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isPassed ? Icons.emoji_events : Icons.school,
                 size: 48,
-              ),
-            const SizedBox(height: 16),
-            Text(
-              'Your score: $score out of ${shuffledConcepts.length}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            if (isPassed)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text(
-                  'You completed this section!',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  color: isPassed ? Colors.green : Colors.orange,
                 ),
               ),
-          ],
+              const SizedBox(height: 24),
+              // Title
+            Text(
+                isPassed ? 'Congratulations!' : 'Keep Practicing!',
+                  style: TextStyle(
+                  fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  color: isPassed ? Colors.green : Colors.orange,
+                  ),
+                ),
+              const SizedBox(height: 16),
+              // Score Display
+              Text(
+                'Score: $score/${shuffledConcepts.length} (${percentage.toStringAsFixed(1)}%)',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
         ),
-        actions: [
-          TextButton(
+              ),
+              const SizedBox(height: 16),
+              // Message
+              Text(
+                isPassed
+                  ? 'You\'ve completed the Positions-2 practice!'
+                  : 'You\'re making progress! Keep practicing to improve.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              // Buttons
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton.icon(
             onPressed: () {
-              Navigator.of(context).pop();
+                      Navigator.of(context).pop(); // Close dialog
+                      Navigator.of(context).pop(); // Return to home screen
+                    },
+                    icon: const Icon(Icons.home),
+                    label: const Text('Main Menu'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
               setState(() {
-                isGameMode = false;
+                        isGameMode = true;
                 score = 0;
                 currentQuestion = 0;
                 selectedAnswer = null;
                 showResult = false;
+                        shuffledConcepts = List.from(concepts)..shuffle();
+                        for (var concept in shuffledConcepts) {
+                          concept.options.shuffle();
+                        }
               });
             },
-            child: const Text('OK'),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Play Again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
           ),
         ],
+          ),
+        ),
       ),
     );
   }
@@ -405,32 +494,56 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(isGameMode ? 'Position & Patterns Game' : 'Learn Position & Patterns'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Position Patterns 2',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         actions: [
-          if (!isGameMode)
-            IconButton(
-              icon: const Icon(Icons.games),
-              onPressed: _startGame,
-              tooltip: 'Start Game',
-            ),
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () {},
+          ),
         ],
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Color(0xFF7B2FF2),
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: Color(0xFF7B2FF2),
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF7B2FF2), Color(0xFFf357a8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.3),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-            ],
+            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
           ),
         ),
         child: SafeArea(
-          child: isGameMode ? _buildGameMode() : _buildLearningMode(),
+          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
         ),
       ),
     );
@@ -442,10 +555,10 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
           child: Text(
-            'Learn About Positions and Patterns',
-            style: TextStyle(
+            'Learn Position Patterns',
+            style: const TextStyle(
               fontSize: 24,
-              color: Theme.of(context).colorScheme.primary,
+              color: Color(0xFF7B2FF2),
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
@@ -457,26 +570,9 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Introduction
-                  Text(
-                    'Understanding Positions',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Positions help us describe where things are. Let\'s learn about different positions:',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Position Concepts
-                  ...concepts.where((c) => !c.name.contains('Pattern')).map((concept) {
+                children: concepts.map((concept) {
                     return Card(
+                    color: Colors.white,
                       margin: const EdgeInsets.only(bottom: 16),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
@@ -488,135 +584,21 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Center(
-                              child: concept.visual,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              concept.description,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Example: ${concept.example}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontStyle: FontStyle.italic,
-                                color: Theme.of(context).colorScheme.secondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-
-                  const SizedBox(height: 24),
-
-                  // Patterns Introduction
-                  Text(
-                    'Understanding Patterns',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Patterns are sequences that repeat in a predictable way. Let\'s learn about different types of patterns:',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Pattern Concepts
-                  ...concepts.where((c) => c.name.contains('Pattern')).map((concept) {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              concept.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Center(
-                              child: concept.visual,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              concept.description,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Next in pattern: ${concept.example}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontStyle: FontStyle.italic,
-                                color: Theme.of(context).colorScheme.secondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-
-                  const SizedBox(height: 24),
-
-                  // Practice Section
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Ready to Practice?',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
+                              color: Color(0xFF7B2FF2),
                             ),
                           ),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Test your understanding by playing the game! You\'ll need to:',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text('• Identify positions correctly'),
-                          const Text('• Find the next item in patterns'),
-                          const Text('• Get at least half the questions right to complete the game'),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: ElevatedButton.icon(
-                              onPressed: _startGame,
-                              icon: const Icon(Icons.games),
-                              label: const Text('Start Game'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              ),
-                            ),
+                          Center(child: concept.visual),
+                          const SizedBox(height: 12),
+                          Text(
+                            concept.description,
+                            style: const TextStyle(fontSize: 16, color: Color(0xFF7B2FF2)),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
             ),
           ),
@@ -626,111 +608,12 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
   }
 
   Widget _buildGameMode() {
-    // Game completed view
-    if (currentQuestion >= shuffledConcepts.length) {
-      return SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.celebration,
-                size: 80,
-                color: Colors.amber,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Game Completed!',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Your final score: $score out of ${shuffledConcepts.length}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-              Text(
-                'Completion: ${(score / shuffledConcepts.length * 100).toStringAsFixed(1)}%',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: score == shuffledConcepts.length ? Colors.green : Colors.orange,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: MediaQuery.of(context).size.width * 0.8,
-                child: LinearProgressIndicator(
-                  value: score / shuffledConcepts.length,
-                  backgroundColor: Colors.grey.withOpacity(0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    score == shuffledConcepts.length ? Colors.green : Colors.orange,
-                  ),
-                  minHeight: 10,
-                  borderRadius: BorderRadius.circular(5),
-                ),
-              ),
-              const SizedBox(height: 40),
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                alignment: WrapAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        isGameMode = false;
-                      });
-                    },
-                    icon: const Icon(Icons.book),
-                    label: const Text('Learning Mode'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.secondary,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        score = 0;
-                        currentQuestion = 0;
-                        showResult = false;
-                        selectedAnswer = null;
-                      });
-                      _saveGameState();
-                    },
-                    icon: const Icon(Icons.replay),
-                    label: const Text('Play Again'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Current game question view
     final concept = shuffledConcepts[currentQuestion];
     final options = List<String>.from(concept.options);
 
-    return SingleChildScrollView(
-      child: Padding(
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -797,8 +680,7 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
               height: 100,
               width: double.infinity,
               alignment: Alignment.center,
-              child: FittedBox(
-                fit: BoxFit.contain,
+            child: Center(
                 child: concept.visual,
               ),
             ),
@@ -806,69 +688,57 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
             // Answer options
             ...options.map((option) {
               final isSelected = selectedAnswer == option;
-              final isCorrect = showResult && option == concept.example;
-              final isIncorrect = showResult && isSelected && option != concept.example;
+            final isCorrectOption = showResult && option == concept.example;
+            final isIncorrect = showResult && isSelected && !isCorrect;
               
               Color backgroundColor;
-              if (isCorrect) {
-                backgroundColor = Colors.green.shade100;
+            if (isCorrectOption) {
+              backgroundColor = Colors.green.withOpacity(0.9);
               } else if (isIncorrect) {
-                backgroundColor = Colors.red.shade100;
+              backgroundColor = Colors.red.withOpacity(0.9);
               } else if (isSelected) {
-                backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.2);
+              backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.9);
               } else {
-                backgroundColor = Colors.white;
-              }
-
-              Color borderColor;
-              if (isCorrect) {
-                borderColor = Colors.green;
-              } else if (isIncorrect) {
-                borderColor = Colors.red;
-              } else if (isSelected) {
-                borderColor = Theme.of(context).colorScheme.primary;
-              } else {
-                borderColor = Colors.grey.shade300;
+              backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.7);
               }
 
               return ScaleTransition(
-                scale: _animation,
-                child: Container(
+              scale: (isSelected && showResult) ? _answerScaleAnimation : const AlwaysStoppedAnimation(1.0),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
                   margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
                   child: Material(
                     borderRadius: BorderRadius.circular(12),
                     elevation: isSelected ? 4 : 1,
+                  color: Colors.transparent,
                     child: InkWell(
                       onTap: showResult ? null : () => _checkAnswer(option),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: backgroundColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: borderColor,
-                            width: 2,
-                          ),
-                        ),
                         child: Row(
                           children: [
                             Expanded(
                               child: Text(
                                 option,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 2,
+                              textAlign: TextAlign.center,
                               ),
                             ),
-                            if (isCorrect)
-                              const Icon(Icons.check_circle, color: Colors.green, size: 20)
+                          if (isCorrectOption)
+                            const Icon(Icons.check_circle, color: Colors.white, size: 24)
                             else if (isIncorrect)
-                              const Icon(Icons.cancel, color: Colors.red, size: 20),
+                            const Icon(Icons.cancel, color: Colors.white, size: 24),
                           ],
                         ),
                       ),
@@ -877,34 +747,7 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
                 ),
               );
             }).toList(),
-            const SizedBox(height: 20),
-            // Next button
-            if (showResult)
-              ScaleTransition(
-                scale: _animation,
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _nextQuestion,
-                    icon: const Icon(Icons.arrow_forward, size: 18),
-                    label: Text(
-                      currentQuestion < shuffledConcepts.length - 1 ? 'Next Question' : 'Finish Game',
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            const SizedBox(height: 16),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -912,6 +755,7 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
   @override
   void dispose() {
     _animationController.dispose();
+    _answerAnimationController.dispose();
     flutterTts.stop();
     super.dispose();
   }

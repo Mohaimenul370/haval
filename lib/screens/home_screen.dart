@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/menu_card.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -6,8 +7,38 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Set status bar and navigation bar color to purple
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Color(0xFF6A1B9A),
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Color(0xFF6A1B9A),
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+    );
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F5F2),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF6A1B9A),
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'KG Education',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Color(0xFF6A1B9A),
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: Color(0xFF6A1B9A),
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -74,6 +105,10 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: Container(
+        height: MediaQuery.of(context).padding.bottom + 20,
+        color: const Color(0xFF6A1B9A),
       ),
     );
   }

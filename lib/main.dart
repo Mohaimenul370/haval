@@ -34,6 +34,13 @@ import 'screens/fractions_chapter_screen.dart';
 import 'screens/fractions_2_chapter_screen.dart';
 import 'screens/measures_chapter_screen.dart';
 import 'screens/time_chapter_screen.dart';
+import 'screens/statistics_chapter_screen.dart';
+import 'screens/positions_chapter_screen.dart';
+import 'screens/geometry_chapter_screen.dart';
+import 'screens/geometry_2_chapter_screen.dart';
+import 'screens/time_2_chapter_screen.dart';
+import 'screens/measures_2_chapter_screen.dart';
+import 'screens/position_patterns_2_chapter_screen.dart';
 
 void main() async {
   try {
@@ -67,11 +74,27 @@ void main() async {
     
     // Start the app
     print('Starting application...');
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Color(0xFF6A1B9A),
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Color(0xFF6A1B9A),
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+    );
     runApp(const MyApp());
   } catch (e) {
     // Critical error handling
     print('CRITICAL ERROR during app initialization: $e');
     // Still try to run the app even if initialization failed
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Color(0xFF6A1B9A),
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Color(0xFF6A1B9A),
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+    );
     runApp(const MyApp());
   }
 }
@@ -103,9 +126,11 @@ class MyApp extends StatelessWidget {
         '/numbers_to_20_learn': (context) => const NumbersTo20Screen(isGameMode: false),
         '/numbers_to_20_game': (context) => const NumbersTo20Screen(isGameMode: true),
         '/shapes': (context) => const ShapesChapterScreen(),
-        '/vocab': (context) => const AlphabetScreen(), // Replace with your vocab screen if different
-        '/analysis': (context) => const StatisticsScreen(), // Replace with your analysis screen if different
-        '/settings': (context) => const SettingsScreen(), // Replace with your settings screen if you have one
+        '/vocab': (context) => const AlphabetScreen(),
+        '/analysis': (context) => const StatisticsChapterScreen(),
+        '/statistics_learn': (context) => const StatisticsScreen(isGameMode: false),
+        '/statistics_game': (context) => const StatisticsScreen(isGameMode: true),
+        '/settings': (context) => const SettingsScreen(),
         '/fractions': (context) => const FractionsChapterScreen(),
         '/fractions_2': (context) => const Fractions2ChapterScreen(),
         '/fractions_2_learn': (context) => const Fractions2Screen(isGameMode: false),
@@ -116,15 +141,37 @@ class MyApp extends StatelessWidget {
         '/time': (context) => const TimeChapterScreen(),
         '/time_learn': (context) => const TimeScreen(isGameMode: false),
         '/time_game': (context) => const TimeScreen(isGameMode: true),
-        '/statistics': (context) => const StatisticsScreen(),
-        '/position_patterns_2': (context) => const PositionPatterns2Screen(),
-        '/geometry': (context) => const GeometryScreen(),
-        '/geometry_2': (context) => const Geometry2Screen(),
-        '/time_2': (context) => const Time2Screen(),
+        '/position_patterns_2': (context) => const PositionPatterns2ChapterScreen(),
+        '/position_patterns_2/learn': (context) => const PositionPatterns2Screen(isGameMode: false),
+        '/position_patterns_2/game': (context) => const PositionPatterns2Screen(isGameMode: true),
+        '/geometry': (context) => const GeometryChapterScreen(),
+        '/geometry/learn': (context) => const GeometryScreen(isGameMode: false),
+        '/geometry/game': (context) => const GeometryScreen(isGameMode: true),
+        '/time_2': (context) => const Time2ChapterScreen(),
+        '/time_2/learn': (context) => const Time2Screen(isGameMode: false),
+        '/time_2/game': (context) => const Time2Screen(isGameMode: true),
         '/statistics_2': (context) => const Statistics2ChapterScreen(),
-        '/positions': (context) => const PositionsScreen(),
-        '/measures_2': (context) => const Measures2Screen(),
+        '/positions': (context) => const PositionsChapterScreen(),
+        '/positions/learn': (context) => const PositionsScreen(isGameMode: false),
+        '/positions/game': (context) => const PositionsScreen(isGameMode: true),
+        '/measures_2': (context) => const Measures2ChapterScreen(),
+        '/measures_2/learn': (context) => const Measures2Screen(isGameMode: false),
+        '/measures_2/game': (context) => const Measures2Screen(isGameMode: true),
         '/play': (context) => const PlayScreen(),
+        '/geometry_2': (context) => const Geometry2ChapterScreen(),
+        '/geometry_2/learn': (context) => const Geometry2Screen(isGameMode: false),
+        '/geometry_2/game': (context) => const Geometry2Screen(isGameMode: true),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/statistics') {
+          final args = settings.arguments as Map<String, dynamic>?;
+          final isGameMode = args != null && args['isGameMode'] == true;
+          return MaterialPageRoute(
+            builder: (context) => StatisticsScreen(isGameMode: isGameMode),
+          );
+        }
+        // fallback to default
+        return null;
       },
     );
   }
@@ -323,224 +370,325 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate progress for the progress bar
     final requiredGames = GameProgressService.requiredGames;
     final passedGames = requiredGames.where((gameId) {
       final percent = _gameScores[gameId] ?? 0.0;
       return percent >= 50.0;
     }).length;
     final progress = requiredGames.isNotEmpty ? passedGames / requiredGames.length : 0.0;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F5F2),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Hello,\nCharmie',
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              const SizedBox(height: 24),
+              // Row for progress bar, info button, and settings icon
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: MediaQuery.of(context).size.width * 0.55,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFB3E5FC),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(height: 16),
-                    // Overall progress bar
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Stack(
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                'Overall Progress: ${(progress * 100).toStringAsFixed(0)}%',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: FractionallySizedBox(
+                            widthFactor: progress,
+                            child: Container(
+                              height: 26,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF6A1B9A),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Center(
+                          child: Text(
+                            '${(progress * 100).toStringAsFixed(0)}%',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                               ),
                               const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.refresh, size: 20),
-                                tooltip: 'Reset Progress',
-                                onPressed: _resetProgress,
+                  // Info button
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.07),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.info_outline, color: Color(0xFF6A1B9A), size: 18),
+                      padding: EdgeInsets.zero,
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Info'),
+                            content: const Text('Pass all the chapter to unlock the Math Play'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('OK'),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
-                          LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: Colors.grey.withOpacity(0.2),
-                            valueColor: AlwaysStoppedAnimation<Color>(progress >= 1.0 ? Colors.green : Colors.orange),
-                            minHeight: 10,
-                            borderRadius: BorderRadius.circular(5),
+                        );
+                      },
+                    ),
+                  ),
+                  const Spacer(),
+                  // Settings icon at top right, aligned with row
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.settings, color: Colors.grey),
+                      onPressed: _resetProgress,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              // Home screen title below progress bar
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      'Welcome,',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'Bubblegum Sans',
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF6A1B9A),
+                        letterSpacing: 1.2,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 8,
+                            color: Colors.black12,
+                            offset: Offset(2, 2),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    Text(
+                      'Super Solver!',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'Bubblegum Sans',
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF6A1B9A),
+                        letterSpacing: 1.2,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 8,
+                            color: Colors.black12,
+                            offset: Offset(2, 2),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
+              const SizedBox(height: 24),
+              // Main content below
+              Expanded(
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(child: SizedBox()),
               SliverGrid(
                 delegate: SliverChildListDelegate(
                   [
-                    MenuCard(
-                      icon: Icons.looks_one,
-                      color: Colors.green,
-                      title: 'Numbers',
-                      subtitle: 'Números',
+                          _buildChapterCard(
+                            context,
+                            icon: Icons.pie_chart,
+                            label: 'Fractions',
+                            color: const Color(0xFFE91E63),
                       onTap: () async {
-                        await Navigator.pushNamed(context, '/numbers');
+                              await Navigator.pushNamed(context, '/fractions');
                         if (mounted) _loadScores();
                       },
                     ),
-                    MenuCard(
-                      icon: Icons.menu_book,
-                      color: Colors.orange,
-                      title: 'Number 20',
-                      subtitle: 'Número 20',
+                          _buildChapterCard(
+                            context,
+                            icon: Icons.remove,
+                            label: 'Number 20',
+                            color: const Color(0xFF2196F3),
                       onTap: () async {
                         await Navigator.pushNamed(context, '/numbers_to_20');
                         if (mounted) _loadScores();
                       },
                     ),
-                    MenuCard(
-                      icon: Icons.category,
-                      color: Colors.purple,
-                      title: 'Shapes',
-                      subtitle: 'Formas',
+                          _buildChapterCard(
+                            context,
+                            icon: Icons.clear,
+                            label: 'Numbers',
+                            color: const Color(0xFF4CAF50),
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/numbers');
+                              if (mounted) _loadScores();
+                            },
+                          ),
+                          _buildChapterCard(
+                            context,
+                            icon: Icons.horizontal_split,
+                            label: 'Shapes',
+                            color: const Color(0xFFFF9800),
                       onTap: () async {
                         await Navigator.pushNamed(context, '/shapes');
                         if (mounted) _loadScores();
                       },
                     ),
-                    MenuCard(
-                      icon: Icons.analytics,
-                      color: Colors.teal,
-                      title: 'Statistics 2',
-                      subtitle: 'Estadísticas 2',
-                      onTap: () async {
-                        await Navigator.pushNamed(context, '/statistics_2');
-                        if (mounted) _loadScores();
-                      },
-                    ),
-                    MenuCard(
-                      icon: Icons.calculate,
-                      color: Colors.indigo,
-                      title: 'Fractions',
-                      subtitle: 'Fracciones',
-                      onTap: () async {
-                        await Navigator.pushNamed(context, '/fractions');
-                        if (mounted) _loadScores();
-                      },
-                    ),
-                    MenuCard(
-                      icon: Icons.calculate,
-                      color: Colors.deepPurpleAccent,
-                      title: 'Fraction 2',
-                      subtitle: 'Fracción 2',
+                          _buildChapterCard(
+                            context,
+                            icon: Icons.pie_chart,
+                            label: 'Fractions 2',
+                            color: const Color(0xFFE91E63),
                       onTap: () async {
                         await Navigator.pushNamed(context, '/fractions_2');
                         if (mounted) _loadScores();
                       },
                     ),
-                    MenuCard(
-                      icon: Icons.straighten,
-                      color: Colors.brown,
-                      title: 'Measures',
-                      subtitle: 'Medidas',
+                          _buildChapterCard(
+                            context,
+                            icon: Icons.linear_scale,
+                            label: 'Measures',
+                            color: const Color(0xFF9C27B0),
                       onTap: () async {
                         await Navigator.pushNamed(context, '/measures');
                         if (mounted) _loadScores();
                       },
                     ),
-                    MenuCard(
+                          _buildChapterCard(
+                            context,
+                            icon: Icons.category,
+                            label: 'Geometry',
+                            color: const Color(0xFF2196F3),
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/geometry');
+                              if (mounted) _loadScores();
+                            },
+                          ),
+                          _buildChapterCard(
+                            context,
                       icon: Icons.access_time,
-                      color: Colors.deepOrange,
-                      title: 'Time',
-                      subtitle: 'Tiempo',
+                            label: 'Time',
+                            color: const Color(0xFF00BCD4),
                       onTap: () async {
                         await Navigator.pushNamed(context, '/time');
                         if (mounted) _loadScores();
                       },
                     ),
-                    MenuCard(
+                          _buildChapterCard(
+                            context,
                       icon: Icons.bar_chart,
-                      color: Colors.cyan,
-                      title: 'Statistics',
-                      subtitle: 'Estadísticas',
+                            label: 'Statistics',
+                            color: const Color(0xFF8BC34A),
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/analysis');
+                              if (mounted) _loadScores();
+                            },
+                          ),
+                          _buildChapterCard(
+                            context,
+                            icon: Icons.straighten,
+                            label: 'Measures 2',
+                            color: const Color(0xFFFF9800),
                       onTap: () async {
-                        await Navigator.pushNamed(context, '/statistics');
+                              await Navigator.pushNamed(context, '/measures_2');
                         if (mounted) _loadScores();
                       },
                     ),
-                    MenuCard(
+                          _buildChapterCard(
+                            context,
                       icon: Icons.pattern,
-                      color: Colors.pink,
-                      title: 'Patterns',
-                      subtitle: 'Patrones',
+                            label: 'Positions 2',
+                            color: const Color(0xFFE91E63),
                       onTap: () async {
                         await Navigator.pushNamed(context, '/position_patterns_2');
                         if (mounted) _loadScores();
                       },
                     ),
-                    MenuCard(
-                      icon: Icons.shape_line,
-                      color: Colors.amber,
-                      title: 'Geometry',
-                      subtitle: 'Geometría',
+                          _buildChapterCard(
+                            context,
+                            icon: Icons.bar_chart,
+                            label: 'Statistics 2',
+                            color: const Color(0xFF00BCD4),
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/statistics_2');
+                              if (mounted) _loadScores();
+                            },
+                          ),
+                          _buildChapterCard(
+                            context,
+                            icon: Icons.dataset,
+                            label: 'Positions',
+                            color: const Color(0xFF4CAF50),
                       onTap: () async {
-                        await Navigator.pushNamed(context, '/geometry');
+                              await Navigator.pushNamed(context, '/positions');
                         if (mounted) _loadScores();
                       },
                     ),
-                    MenuCard(
-                      icon: Icons.shape_line,
-                      color: Colors.amberAccent,
-                      title: 'Geometry-2',
-                      subtitle: 'Geometría-2',
+                          _buildChapterCard(
+                            context,
+                            icon: Icons.functions,
+                            label: 'Geometry 2',
+                            color: const Color(0xFFFF5722),
                       onTap: () async {
                         await Navigator.pushNamed(context, '/geometry_2');
                         if (mounted) _loadScores();
                       },
                     ),
-                    MenuCard(
-                      icon: Icons.access_time_filled,
-                      color: Colors.deepOrangeAccent,
-                      title: 'Time-2',
-                      subtitle: 'Tiempo-2',
+                          _buildChapterCard(
+                            context,
+                            icon: Icons.text_snippet,
+                            label: 'Time 2',
+                            color: const Color(0xFF9C27B0),
                       onTap: () async {
                         await Navigator.pushNamed(context, '/time_2');
                         if (mounted) _loadScores();
                       },
                     ),
-                    MenuCard(
-                      icon: Icons.navigation,
-                      color: Colors.pinkAccent,
-                      title: 'Position-2',
-                      subtitle: 'Posición-2',
-                      onTap: () async {
-                        await Navigator.pushNamed(context, '/positions');
-                        if (mounted) _loadScores();
-                      },
-                    ),
-                    MenuCard(
-                      icon: Icons.straighten,
-                      color: Colors.brown.shade700,
-                      title: 'Measures-2',
-                      subtitle: 'Medidas-2',
-                      onTap: () async {
-                        await Navigator.pushNamed(context, '/measures_2');
-                        if (mounted) _loadScores();
-                      },
-                    ),
-                    MenuCard(
-                      icon: _canAccessMathPlay ? Icons.flag : Icons.lock,
-                      color: Colors.black,
-                      title: 'Final',
-                      subtitle: 'Final',
+                          _buildChapterCard(
+                            context,
+                            icon: _canAccessMathPlay ? Icons.emoji_events : Icons.lock,
+                            label: 'Math Play',
+                            color: const Color(0xFF673AB7),
                       onTap: () {
                         if (_canAccessMathPlay) {
                           Navigator.pushNamed(context, '/play');
@@ -555,12 +703,60 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisCount: 2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
-                  childAspectRatio: 0.92,
+                        childAspectRatio: 1.2,
                 ),
               ),
               const SliverPadding(
                 padding: EdgeInsets.only(bottom: 16),
                 sliver: SliverToBoxAdapter(child: SizedBox()),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChapterCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: color,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 48,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'numbers_to_10_screen.dart';
+import 'package:flutter/services.dart';
 
-class NumbersTo10ChapterScreen extends StatelessWidget {
-  const NumbersTo10ChapterScreen({super.key});
+class Measures2ChapterScreen extends StatelessWidget {
+  const Measures2ChapterScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +13,7 @@ class NumbersTo10ChapterScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          'Learning Numbers to 10',
+          'Learning Measures 2',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -30,6 +30,13 @@ class NumbersTo10ChapterScreen extends StatelessWidget {
             onPressed: () {},
           ),
         ],
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Color(0xFF7B2FF2),
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: Color(0xFF7B2FF2),
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -55,7 +62,7 @@ class NumbersTo10ChapterScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 32),
               const Text(
-                'Numbers to 10',
+                'Measures 2',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -74,16 +81,10 @@ class NumbersTo10ChapterScreen extends StatelessWidget {
               const SizedBox(height: 32),
               _buildModeCard(
                 context,
-                'Learn Numbers',
+                'Learn Measures 2',
                 Icons.menu_book,
                 'Interactive lessons and tutorials',
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const NumbersTo10Screen(isGameMode: false),
-                    fullscreenDialog: true,
-                  ),
-                ),
+                () => Navigator.pushNamed(context, '/measures_2/learn'),
               ),
               const SizedBox(height: 20),
               _buildModeCard(
@@ -91,13 +92,7 @@ class NumbersTo10ChapterScreen extends StatelessWidget {
                 'Practice Game',
                 Icons.videogame_asset,
                 'Fun games to test your knowledge',
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const NumbersTo10Screen(isGameMode: true),
-                    fullscreenDialog: true,
-                  ),
-                ),
+                () => Navigator.pushNamed(context, '/measures_2/game'),
               ),
               const Spacer(),
               Opacity(

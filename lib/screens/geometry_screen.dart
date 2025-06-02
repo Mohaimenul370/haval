@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:developer' as developer;
 import '../services/shared_preference_service.dart';
+import 'package:flutter/services.dart';
 
 class GeometryConcept {
   final String name;
@@ -18,13 +19,18 @@ class GeometryConcept {
 }
 
 class GeometryScreen extends StatefulWidget {
-  const GeometryScreen({super.key});
+  final bool isGameMode;
+  
+  const GeometryScreen({
+    super.key,
+    required this.isGameMode,
+  });
 
   @override
   State<GeometryScreen> createState() => _GeometryScreenState();
 }
 
-class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProviderStateMixin {
+class _GeometryScreenState extends State<GeometryScreen> with TickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
   bool isGameMode = false;  // Initialize as false to show lesson mode first
   int score = 0;
@@ -35,6 +41,8 @@ class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProvid
   List<GeometryConcept> shuffledConcepts = [];
   late AnimationController _animationController;
   late Animation<double> _animation;
+  late AnimationController _optionAnimationController;
+  late Animation<double> _optionScaleAnimation;
   bool _isLoading = false;  // Set to false since we don't need to load game state initially
 
   final List<GeometryConcept> concepts = [
@@ -96,6 +104,29 @@ class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProvid
         curve: Curves.easeInOut,
       ),
     );
+    _optionAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _optionScaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _optionAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    if (widget.isGameMode) {
+      isGameMode = true;
+      score = 0;
+      currentQuestion = 0;
+      selectedAnswer = null;
+      showResult = false;
+      shuffledConcepts = List.from(concepts)..shuffle();
+      for (var concept in shuffledConcepts) {
+        concept.options.shuffle();
+      }
+      _animationController.reset();
+      _animationController.forward();
+    }
   }
 
   Future<void> _initializeTts() async {
@@ -135,24 +166,18 @@ class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProvid
       } else {
         _speakText('Try again! Think about the shape.');
       }
-
-      // Save score if this is the last question
-      if (currentQuestion == shuffledConcepts.length - 1) {
-        SharedPreferenceService.saveGameProgress('geometry', score, shuffledConcepts.length);
-      }
     });
-  }
-
-  void _nextQuestion() {
-    setState(() {
+    _optionAnimationController.forward().then((_) {
+      _optionAnimationController.reverse();
+    });
+    Future.delayed(const Duration(milliseconds: 400), () {
       if (currentQuestion < shuffledConcepts.length - 1) {
+        setState(() {
         currentQuestion++;
         selectedAnswer = null;
         showResult = false;
-        _speakText('Next question!');
+        });
       } else {
-        // Save final score and show completion dialog
-        SharedPreferenceService.saveGameProgress('geometry', score, shuffledConcepts.length);
         _showCompletionDialog();
       }
     });
@@ -162,80 +187,168 @@ class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProvid
     final percentage = (score / shuffledConcepts.length) * 100;
     final isPassed = percentage >= 50.0;
     
+    // Save game progress
+    SharedPreferenceService.saveGameProgress('geometry', score, shuffledConcepts.length);
+    
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(isPassed ? 'Congratulations!' : 'Keep Practicing!'),
-        content: Column(
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isPassed)
-              const Icon(
-                Icons.check_circle,
-                color: Colors.green,
+              // Header with Icon
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isPassed 
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isPassed ? Icons.emoji_events : Icons.school,
                 size: 48,
+                  color: isPassed ? Colors.green : Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Title
+              Text(
+                isPassed ? 'Congratulations!' : 'Keep Practicing!',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: isPassed ? Colors.green : Colors.orange,
+                ),
               ),
             const SizedBox(height: 16),
+              // Score Display
             Text(
-              'Your score: $score out of ${shuffledConcepts.length}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            if (isPassed)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text(
-                  'You completed this section!',
-                  style: TextStyle(
-                    color: Colors.green,
+                'Score: $score/${shuffledConcepts.length} (${percentage.toStringAsFixed(1)}%)',
+                style: const TextStyle(
+                  fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-          ],
+              const SizedBox(height: 16),
+              // Message
+              Text(
+                isPassed
+                  ? 'You\'ve completed the Geometry practice!'
+                  : 'You\'re making progress! Keep practicing to improve.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
         ),
-        actions: [
-          TextButton(
+              const SizedBox(height: 24),
+              // Buttons
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton.icon(
             onPressed: () {
               Navigator.of(context).pop(); // Close dialog
               Navigator.of(context).pop(); // Return to home screen
             },
-            child: const Text('Go to Home'),
+                    icon: const Icon(Icons.home),
+                    label: const Text('Go to Home'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  if (isPassed)
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // Close dialog
+                        setState(() {
+                          score = 0;
+                          currentQuestion = 0;
+                          selectedAnswer = null;
+                          showResult = false;
+                          shuffledConcepts = List.from(concepts)..shuffle();
+                          for (var concept in shuffledConcepts) {
+                            concept.options.shuffle();
+                          }
+                        });
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Play Again'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.secondary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
           ),
         ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF6A1B9A),
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF6A1B9A),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
     return Scaffold(
       appBar: AppBar(
-        title: Text(isGameMode ? 'Geometry Game' : 'Learn Geometry'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          if (!isGameMode)
-            IconButton(
-              icon: const Icon(Icons.games),
-              onPressed: _startGame,
-              tooltip: 'Start Game',
-            ),
-        ],
+        title: Text(
+          widget.isGameMode ? 'Geometry Game' : 'Learn Geometry',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        backgroundColor: Color(0xFF7B2FF2),
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.3),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-            ],
+            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
           ),
         ),
         child: SafeArea(
-          child: isGameMode ? _buildGameMode() : _buildLearningMode(),
+          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
         ),
       ),
     );
@@ -246,9 +359,9 @@ class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProvid
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxHeight < 600;
         final isNarrowScreen = constraints.maxWidth < 360;
-        
-        return SingleChildScrollView(
-          child: Padding(
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
             padding: EdgeInsets.symmetric(
               horizontal: isNarrowScreen ? 8.0 : 16.0,
               vertical: isSmallScreen ? 8.0 : 16.0,
@@ -359,7 +472,15 @@ class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProvid
                     borderColor = Colors.grey.shade300;
                   }
 
-                  return Container(
+                return AnimatedBuilder(
+                  animation: _optionAnimationController,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: isSelected ? _optionScaleAnimation.value : 1.0,
+                      child: child,
+                    );
+                  },
+                  child: Container(
                     margin: EdgeInsets.only(
                       bottom: isSmallScreen ? 6 : 8,
                       left: isNarrowScreen ? 4 : 0,
@@ -371,7 +492,9 @@ class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProvid
                       child: InkWell(
                         onTap: showResult ? null : () => _checkAnswer(option),
                         borderRadius: BorderRadius.circular(12),
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 350),
+                          curve: Curves.easeInOut,
                           width: double.infinity,
                           padding: EdgeInsets.symmetric(
                             vertical: isSmallScreen ? 8 : 12,
@@ -415,37 +538,11 @@ class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProvid
                         ),
                       ),
                     ),
+                  ),
                   );
                 }).toList(),
-                SizedBox(height: isSmallScreen ? 12 : 20),
-                // Next button
-                if (showResult)
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: _nextQuestion,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 24 : 32,
-                          vertical: isSmallScreen ? 12 : 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        currentQuestion < shuffledConcepts.length - 1 ? 'Next Question' : 'Finish Game',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 14 : 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
                 SizedBox(height: isSmallScreen ? 8 : 16),
               ],
-            ),
           ),
         );
       },
@@ -522,50 +619,6 @@ class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProvid
                   }).toList(),
 
                   const SizedBox(height: 24),
-
-                  // Practice Section
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Ready to Practice?',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Test your understanding by playing the game! You\'ll need to:',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text('• Identify different geometric shapes'),
-                          const Text('• Match shapes with their names'),
-                          const Text('• Understand shape properties'),
-                          const Text('• Get at least half the questions right to complete the game'),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: ElevatedButton.icon(
-                              onPressed: _startGame,
-                              icon: const Icon(Icons.games),
-                              label: const Text('Start Game'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -579,6 +632,7 @@ class _GeometryScreenState extends State<GeometryScreen> with SingleTickerProvid
   void dispose() {
     flutterTts.stop();
     _animationController.dispose();
+    _optionAnimationController.dispose();
     super.dispose();
   }
 } 

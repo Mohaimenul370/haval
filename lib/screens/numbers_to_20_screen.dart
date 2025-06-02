@@ -5,6 +5,7 @@ import '../services/preference_service.dart';
 import '../services/shared_preference_service.dart';
 import '../widgets/menu_card.dart';
 import 'dart:math';
+import 'package:flutter/services.dart';
 
 class Question {
   final int num1;
@@ -434,18 +435,46 @@ class _NumbersTo20ScreenState extends State<NumbersTo20Screen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F5F2),
-      appBar: AppBar(
-        title: Text(isGameMode ? 'Practice Game' : 'Learn Numbers'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Color(0xFF7B2FF2),
+        systemNavigationBarColor: Color(0xFF7B2FF2),
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarIconBrightness: Brightness.light,
       ),
-      body: isGameMode ? _buildGameMode() : _buildLearningMode(),
+      child: Scaffold(
+        backgroundColor: Color(0xFFF3EFFF),
+        appBar: AppBar(
+          title: Text(
+            widget.isGameMode ? 'Numbers to 20 Practice' : 'Learn Numbers to 20',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          backgroundColor: Color(0xFF7B2FF2),
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
+            ),
+          ),
+          child: SafeArea(
+            child: widget.isGameMode ? _buildGameContent() : _buildLearningContent(),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildGameMode() {
+  Widget _buildGameContent() {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -616,7 +645,7 @@ class _NumbersTo20ScreenState extends State<NumbersTo20Screen> with SingleTicker
     );
   }
 
-  Widget _buildLearningMode() {
+  Widget _buildLearningContent() {
     return Column(
       children: [
         Expanded(
@@ -761,20 +790,7 @@ class _NumbersTo20ScreenState extends State<NumbersTo20Screen> with SingleTicker
   }
 
   Color _getActivityColor(int index) {
-    switch (index) {
-      case 0:
-        return Colors.blue;
-      case 1:
-        return Colors.green;
-      case 2:
-        return Colors.red;
-      case 3:
-        return Colors.purple;
-      case 4:
-        return Colors.orange;
-      default:
-        return Colors.blue;
-    }
+    return const Color(0xFF7B2FF2);
   }
 
   Widget _buildVisual(Question question) {

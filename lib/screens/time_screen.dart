@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import '../services/preference_service.dart';
 import '../services/game_progress_service.dart';
 import '../services/shared_preference_service.dart';
+import 'package:flutter/services.dart';
 
 class TimeConcept {
   final String name;
@@ -241,32 +242,38 @@ class _TimeScreenState extends State<TimeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF6A1B9A),
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF6A1B9A),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isGameMode ? 'Time Game' : 'Learn Time'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          if (!widget.isGameMode)
-            IconButton(
-              icon: const Icon(Icons.games),
-              onPressed: _startGame,
-              tooltip: 'Start Game',
-            ),
-        ],
+        title: Text(
+          widget.isGameMode ? 'Time Game' : 'Learn Time',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        backgroundColor: Color(0xFF7B2FF2),
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.3),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-            ],
+            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
           ),
         ),
-        child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
+        child: SafeArea(
+          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
+        ),
       ),
     );
   }
