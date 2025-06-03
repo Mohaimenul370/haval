@@ -48,12 +48,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
-  flutter_lints: ^2.0.0
+  # The "flutter_lints" package below contains a set of recommended lints for
+  # Dart and Flutter apps. While not required, adding them to your pubspec.yaml
+  # is strongly recommended.
+  flutter_lints: ^3.0.0
   build_runner: ^2.4.8     # For code generation
   mockito: ^5.4.4         # For testing
   integration_test:       # For integration testing
@@ -107,9 +105,8 @@ flutter:
     - assets/data/
     - assets/animations/
 
-flutter_launcher_icons:
-  android: "launcher_icon"
-  image_path: "assets/education_icon.png"
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/education_icon.png"
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/kid_math_icon.png"
 
