@@ -42,71 +42,77 @@ class _Statistics2ScreenState extends State<Statistics2Screen> with SingleTicker
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
 
+  // 5 easy, visual, kid-friendly questions for game mode
   final List<StatisticsConcept> concepts = [
     StatisticsConcept(
-      name: 'Data Collection',
-      description: 'Gathering and organizing information',
-      visual: _buildDataCollectionVisual(),
-      example: 'Favorite Colors',
-      options: [
-        'Favorite Colors',
-        'Types of Pets',
-        'Weather Data',
-        'Classroom Attendance',
-        'Lunch Choices',
-      ],
+      name: 'Favorite Fruit',
+      description: 'Which fruit do most kids like?',
+      visual: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildPictoItem('🍎', 5),
+          _buildPictoItem('🍌', 2),
+          _buildPictoItem('🍇', 3),
+        ],
+      ),
+      example: '🍎',
+      options: ['🍎', '🍌', '🍇', '🍉', '🍊'],
     ),
     StatisticsConcept(
-      name: 'Bar Graphs',
-      description: 'Using bars to show data',
-      visual: _buildBarGraphVisual(),
-      example: 'Bar Graph',
-      options: [
-        'Bar Graph',
-        'Line Graph',
-        'Pie Chart',
-        'Pictograph',
-        'Table',
-      ],
+      name: 'Tallest Bar',
+      description: 'Which bar is the tallest?',
+      visual: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _buildBar(40, 'A'),
+          _buildBar(80, 'B'),
+          _buildBar(30, 'C'),
+        ],
+      ),
+      example: 'B',
+      options: ['A', 'B', 'C', 'D', 'E'],
     ),
     StatisticsConcept(
-      name: 'Pictographs',
-      description: 'Using pictures to show data',
-      visual: _buildPictographVisual(),
-      example: 'Pictograph',
-      options: [
-        'Pictograph',
-        'Bar Graph',
-        'Line Graph',
-        'Pie Chart',
-        'Table',
-      ],
+      name: 'Count the Stars',
+      description: 'How many stars are there?',
+      visual: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(4, (i) => const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text('⭐', style: TextStyle(fontSize: 32)),
+        )),
+      ),
+      example: '4',
+      options: ['2', '3', '4', '5', '6'],
     ),
     StatisticsConcept(
-      name: 'Data Analysis',
-      description: 'Understanding what data tells us',
-      visual: _buildDataAnalysisVisual(),
-      example: 'Most Common',
-      options: [
-        'Most Common',
-        'Least Common',
-        'Total Count',
-        'Difference',
-        'Average',
-      ],
+      name: 'Most Common Animal',
+      description: 'Which animal appears the most?',
+      visual: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildPictoItem('🐶', 4),
+          _buildPictoItem('🐱', 2),
+          _buildPictoItem('🐰', 1),
+        ],
+      ),
+      example: '🐶',
+      options: ['🐶', '🐱', '🐰', '🐦', '🐟'],
     ),
     StatisticsConcept(
-      name: 'Data Comparison',
-      description: 'Comparing different sets of data',
-      visual: _buildDataComparisonVisual(),
-      example: 'Compare Data',
-      options: [
-        'Compare Data',
-        'Count Data',
-        'Sort Data',
-        'Graph Data',
-        'Collect Data',
-      ],
+      name: 'Compare Groups',
+      description: 'Which group has more?',
+      visual: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildComparisonItem('Group A', 6),
+          const Text(' vs ', style: TextStyle(fontSize: 16)),
+          _buildComparisonItem('Group B', 3),
+        ],
+      ),
+      example: 'Group A',
+      options: ['Group A', 'Group B', 'Equal', 'None', 'Both'],
     ),
   ];
 
@@ -480,11 +486,11 @@ class _Statistics2ScreenState extends State<Statistics2Screen> with SingleTicker
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFF6A1B9A),
         elevation: 0,
         centerTitle: true,
         title: Text(
-          widget.isGameMode ? 'Statistics Game' : 'Learn Statistics',
+          isGameMode ? 'Statistics - 2' : 'Learn Statistics 2',
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -493,20 +499,11 @@ class _Statistics2ScreenState extends State<Statistics2Screen> with SingleTicker
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: Color(0xFF7B2FF2),
+          statusBarColor: Color(0xFF6A1B9A),
           statusBarIconBrightness: Brightness.light,
           statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: Color(0xFF7B2FF2),
+          systemNavigationBarColor: Color(0xFF6A1B9A),
           systemNavigationBarIconBrightness: Brightness.light,
-        ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF7B2FF2), Color(0xFFf357a8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
         ),
       ),
       body: Container(
@@ -518,7 +515,7 @@ class _Statistics2ScreenState extends State<Statistics2Screen> with SingleTicker
           ),
         ),
         child: SafeArea(
-          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
+          child: isGameMode ? _buildGameMode() : _buildLearningMode(),
         ),
       ),
     );

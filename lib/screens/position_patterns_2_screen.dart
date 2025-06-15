@@ -364,7 +364,9 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
   void _showCompletionDialog() {
     final percentage = (score / shuffledConcepts.length) * 100;
     final isPassed = percentage >= 50.0;
-    
+    // Always save progress here
+    developer.log('Saving game progress for positions_2: score=$score, total=${shuffledConcepts.length}, percentage=$percentage');
+    SharedPreferenceService.saveGameProgress('positions_2', score, shuffledConcepts.length);
     showDialog(
       context: context,
       barrierDismissible: false,

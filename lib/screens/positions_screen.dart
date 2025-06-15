@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/shared_preference_service.dart';
 
 class PositionConcept {
   final String name;
@@ -330,6 +331,8 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                 setState(() {
                                   quizFinished = true;
                                 });
+                                // Save score to SharedPreferenceService
+                                SharedPreferenceService.saveGameProgress('positions', score, positionGameQuestions.length);
                               }
                             });
                           },

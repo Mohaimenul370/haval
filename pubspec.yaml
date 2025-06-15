@@ -58,6 +58,7 @@ dev_dependencies:
     sdk: flutter
   hive_generator: ^2.0.1
   flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.10
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -104,9 +105,25 @@ flutter:
     - assets/fonts/
     - assets/data/
     - assets/animations/
+    - assets/images/
+    - assets/images/kid_math_app_icon.png
 
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/kid_math_icon.png"
+  image_path: "assets/images/kid_math_app_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/kid_math_app_icon.png"
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/images/kid_math_app_icon.png
+  android: true
+  ios: true
+  web: false
+  android_12:
+    image: assets/images/kid_math_app_icon.png
+    icon_background_color: "#FFFFFF"
+    image_dark: assets/images/kid_math_app_icon.png
+    icon_background_color_dark: "#FFFFFF"
 

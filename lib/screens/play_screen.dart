@@ -515,7 +515,7 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Math Play Time'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: const Color(0xFF6A1B9A),
         foregroundColor: Colors.white,
       ),
       body: Container(

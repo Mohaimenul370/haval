@@ -56,6 +56,16 @@ void main() async {
       DeviceOrientation.portraitDown,
     ]);
     
+    // Set system UI overlay style globally
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Color(0xFF6A1B9A),
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Color(0xFF6A1B9A),
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+    );
+    
     // Log start of initialization
     print('Starting application initialization...');
     
@@ -74,27 +84,11 @@ void main() async {
     
     // Start the app
     print('Starting application...');
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Color(0xFF6A1B9A),
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Color(0xFF6A1B9A),
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
-    );
     runApp(const MyApp());
   } catch (e) {
     // Critical error handling
     print('CRITICAL ERROR during app initialization: $e');
     // Still try to run the app even if initialization failed
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Color(0xFF6A1B9A),
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Color(0xFF6A1B9A),
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
-    );
     runApp(const MyApp());
   }
 }
@@ -109,10 +103,15 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          primary: Colors.blue,
+          seedColor: const Color(0xFF6A1B9A),
+          primary: const Color(0xFF6A1B9A),
           secondary: Colors.orange,
-          background: Colors.white,
+          background: const Color(0xFFF3E6FA),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF6A1B9A),
+          foregroundColor: Colors.white,
+          elevation: 0,
         ),
         fontFamily: 'Comic Sans MS',
         useMaterial3: true,
@@ -196,6 +195,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadScores();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadScores();
+  }
+
   Future<void> _loadScores() async {
     developer.log('Loading scores in HomeScreen...');
     try {
@@ -212,6 +217,8 @@ class _HomeScreenState extends State<HomeScreen> {
       
       // For each required game, check if there's saved progress
       List<String> requiredGames = GameProgressService.requiredGames;
+      // Remove 'geometry_2' from required games if it exists
+      requiredGames.remove('geometry_2');
       int passedGames = 0;
       
       for (String gameId in requiredGames) {
@@ -238,12 +245,12 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      // Calculate overall completion percentage
-      final percentage = ((passedGames / requiredGames.length) * 100).toStringAsFixed(1);
-      developer.log('Overall progress: $percentage% ($passedGames/${requiredGames.length} games)');
+      // Calculate overall completion percentage (now out of 14 chapters)
+      final percentage = ((passedGames / 14) * 100).toStringAsFixed(1);
+      developer.log('Overall progress: $percentage% ($passedGames/14 games)');
       
       // Check if Math Play should be accessible
-      final canAccess = passedGames >= requiredGames.length;
+      final canAccess = passedGames >= 14;
       developer.log('Math Play access: ${canAccess ? 'GRANTED' : 'DENIED'}');
 
       // Update UI if component is still mounted
@@ -379,13 +386,27 @@ class _HomeScreenState extends State<HomeScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF6A1B9A),
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'KG Education',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        automaticallyImplyLeading: false,
+      ),
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               const SizedBox(height: 24),
               // Row for progress bar, info button, and settings icon
               Row(
@@ -399,7 +420,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Stack(
-                        children: [
+                      children: [
                         Align(
                           alignment: Alignment.centerLeft,
                           child: FractionallySizedBox(
@@ -425,8 +446,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                              ),
-                              const SizedBox(width: 8),
+                  ),
+                  const SizedBox(width: 8),
                   // Info button
                   Container(
                     width: 28,
@@ -483,43 +504,26 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 18),
               // Home screen title below progress bar
-              Center(
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Welcome,',
-                      textAlign: TextAlign.center,
+                      'Hello learners',
                       style: const TextStyle(
-                        fontFamily: 'Bubblegum Sans',
-                        fontSize: 32,
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF6A1B9A),
-                        letterSpacing: 1.2,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 8,
-                            color: Colors.black12,
-                            offset: Offset(2, 2),
-                          ),
-                        ],
                       ),
                     ),
+                    const SizedBox(height: 4),
                     Text(
-                      'Super Solver!',
-                      textAlign: TextAlign.center,
+                      "Let's Start",
                       style: const TextStyle(
-                        fontFamily: 'Bubblegum Sans',
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF6A1B9A),
-                        letterSpacing: 1.2,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 8,
-                            color: Colors.black12,
-                            offset: Offset(2, 2),
-                          ),
-                        ],
+                        fontSize: 18,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -531,29 +535,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: CustomScrollView(
                   slivers: [
                     SliverToBoxAdapter(child: SizedBox()),
-              SliverGrid(
-                delegate: SliverChildListDelegate(
-                  [
+                    SliverGrid(
+                      delegate: SliverChildListDelegate(
+                        [
                           _buildChapterCard(
                             context,
                             icon: Icons.pie_chart,
                             label: 'Fractions',
                             color: const Color(0xFFE91E63),
-                      onTap: () async {
+                            onTap: () async {
                               await Navigator.pushNamed(context, '/fractions');
-                        if (mounted) _loadScores();
-                      },
-                    ),
+                              if (mounted) _loadScores();
+                            },
+                          ),
                           _buildChapterCard(
                             context,
                             icon: Icons.remove,
                             label: 'Number 20',
                             color: const Color(0xFF2196F3),
-                      onTap: () async {
-                        await Navigator.pushNamed(context, '/numbers_to_20');
-                        if (mounted) _loadScores();
-                      },
-                    ),
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/numbers_to_20');
+                              if (mounted) _loadScores();
+                            },
+                          ),
                           _buildChapterCard(
                             context,
                             icon: Icons.clear,
@@ -569,31 +573,31 @@ class _HomeScreenState extends State<HomeScreen> {
                             icon: Icons.horizontal_split,
                             label: 'Shapes',
                             color: const Color(0xFFFF9800),
-                      onTap: () async {
-                        await Navigator.pushNamed(context, '/shapes');
-                        if (mounted) _loadScores();
-                      },
-                    ),
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/shapes');
+                              if (mounted) _loadScores();
+                            },
+                          ),
                           _buildChapterCard(
                             context,
                             icon: Icons.pie_chart,
                             label: 'Fractions 2',
                             color: const Color(0xFFE91E63),
-                      onTap: () async {
-                        await Navigator.pushNamed(context, '/fractions_2');
-                        if (mounted) _loadScores();
-                      },
-                    ),
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/fractions_2');
+                              if (mounted) _loadScores();
+                            },
+                          ),
                           _buildChapterCard(
                             context,
                             icon: Icons.linear_scale,
                             label: 'Measures',
                             color: const Color(0xFF9C27B0),
-                      onTap: () async {
-                        await Navigator.pushNamed(context, '/measures');
-                        if (mounted) _loadScores();
-                      },
-                    ),
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/measures');
+                              if (mounted) _loadScores();
+                            },
+                          ),
                           _buildChapterCard(
                             context,
                             icon: Icons.category,
@@ -606,17 +610,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           _buildChapterCard(
                             context,
-                      icon: Icons.access_time,
+                            icon: Icons.access_time,
                             label: 'Time',
                             color: const Color(0xFF00BCD4),
-                      onTap: () async {
-                        await Navigator.pushNamed(context, '/time');
-                        if (mounted) _loadScores();
-                      },
-                    ),
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/time');
+                              if (mounted) _loadScores();
+                            },
+                          ),
                           _buildChapterCard(
                             context,
-                      icon: Icons.bar_chart,
+                            icon: Icons.bar_chart,
                             label: 'Statistics',
                             color: const Color(0xFF8BC34A),
                             onTap: () async {
@@ -629,21 +633,21 @@ class _HomeScreenState extends State<HomeScreen> {
                             icon: Icons.straighten,
                             label: 'Measures 2',
                             color: const Color(0xFFFF9800),
-                      onTap: () async {
+                            onTap: () async {
                               await Navigator.pushNamed(context, '/measures_2');
-                        if (mounted) _loadScores();
-                      },
-                    ),
+                              if (mounted) _loadScores();
+                            },
+                          ),
                           _buildChapterCard(
                             context,
-                      icon: Icons.pattern,
+                            icon: Icons.pattern,
                             label: 'Positions 2',
                             color: const Color(0xFFE91E63),
-                      onTap: () async {
-                        await Navigator.pushNamed(context, '/position_patterns_2');
-                        if (mounted) _loadScores();
-                      },
-                    ),
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/position_patterns_2');
+                              if (mounted) _loadScores();
+                            },
+                          ),
                           _buildChapterCard(
                             context,
                             icon: Icons.bar_chart,
@@ -659,56 +663,46 @@ class _HomeScreenState extends State<HomeScreen> {
                             icon: Icons.dataset,
                             label: 'Positions',
                             color: const Color(0xFF4CAF50),
-                      onTap: () async {
+                            onTap: () async {
                               await Navigator.pushNamed(context, '/positions');
-                        if (mounted) _loadScores();
-                      },
-                    ),
-                          _buildChapterCard(
-                            context,
-                            icon: Icons.functions,
-                            label: 'Geometry 2',
-                            color: const Color(0xFFFF5722),
-                      onTap: () async {
-                        await Navigator.pushNamed(context, '/geometry_2');
-                        if (mounted) _loadScores();
-                      },
-                    ),
+                              if (mounted) _loadScores();
+                            },
+                          ),
                           _buildChapterCard(
                             context,
                             icon: Icons.text_snippet,
                             label: 'Time 2',
                             color: const Color(0xFF9C27B0),
-                      onTap: () async {
-                        await Navigator.pushNamed(context, '/time_2');
-                        if (mounted) _loadScores();
-                      },
-                    ),
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/time_2');
+                              if (mounted) _loadScores();
+                            },
+                          ),
                           _buildChapterCard(
                             context,
                             icon: _canAccessMathPlay ? Icons.emoji_events : Icons.lock,
                             label: 'Math Play',
                             color: const Color(0xFF673AB7),
-                      onTap: () {
-                        if (_canAccessMathPlay) {
-                          Navigator.pushNamed(context, '/play');
-                        } else {
-                          _showLockMessage(context);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                            onTap: () {
+                              if (_canAccessMathPlay) {
+                                Navigator.pushNamed(context, '/play');
+                              } else {
+                                _showLockMessage(context);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
                         childAspectRatio: 1.2,
-                ),
-              ),
-              const SliverPadding(
-                padding: EdgeInsets.only(bottom: 16),
-                sliver: SliverToBoxAdapter(child: SizedBox()),
+                      ),
+                    ),
+                    const SliverPadding(
+                      padding: EdgeInsets.only(bottom: 16),
+                      sliver: SliverToBoxAdapter(child: SizedBox()),
                     ),
                   ],
                 ),

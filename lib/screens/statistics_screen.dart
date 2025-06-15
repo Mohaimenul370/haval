@@ -239,6 +239,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
   void _showGameCompletionDialog() {
     final percentage = (score / gameQuestions.length) * 100;
     final isPassed = percentage >= 50.0;
+    
+    // Save score to SharedPreferenceService
+    SharedPreferenceService.saveGameProgress('statistics', score, gameQuestions.length);
+    
     showDialog(
       context: context,
       barrierDismissible: false,

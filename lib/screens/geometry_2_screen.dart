@@ -342,17 +342,12 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
       _animationController.reverse();
     });
 
-      if (isCorrect) {
-        _score++;
-        _speakText('Correct! ${concepts[_currentQuestion].description}');
-      } else {
-        _speakText('Try again! Think about the concept.');
-      }
-
-      // Save score if this is the last question
-      if (_currentQuestion == concepts.length - 1) {
-        SharedPreferenceService.saveGameProgress('geometry_2', _score, concepts.length);
-      }
+    if (isCorrect) {
+      _score++;
+      _speakText('Correct! ${concepts[_currentQuestion].description}');
+    } else {
+      _speakText('Try again! Think about the concept.');
+    }
 
     // Move to next question after animation
     Future.delayed(const Duration(milliseconds: 1000), () {
@@ -360,9 +355,9 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
       
       if (_currentQuestion < concepts.length - 1) {
         setState(() {
-        _currentQuestion++;
-        _selectedAnswer = null;
-        _showResult = false;
+          _currentQuestion++;
+          _selectedAnswer = null;
+          _showResult = false;
           _isAnswering = false;
           _options = _getRandomOptions(concepts[_currentQuestion]);
         });
@@ -428,17 +423,16 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
       );
     }
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: const Color(0xFF6A1B9A),
         elevation: 0,
         centerTitle: true,
-        title: Text(
-          widget.isGameMode ? 'Geometry Game' : 'Learn Geometry',
-          style: const TextStyle(
+        title: const Text(
+          'Geometry 2',
+          style: TextStyle(
             color: Colors.white,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
-            fontSize: 20,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -624,6 +618,52 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
             style: const TextStyle(fontSize: 18, color: Color(0xFF6A1B9A)),
           ),
           const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    'Question ${_currentQuestion + 1}/${geometryGameQuestions.length}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF6A1B9A),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: LinearProgressIndicator(
+                    value: (_currentQuestion + 1) / geometryGameQuestions.length,
+                    backgroundColor: Colors.grey.withOpacity(0.2),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6A1B9A)),
+                    minHeight: 8,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6A1B9A),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    'Score: $_score',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           if (q.visual != null)
             Container(
               height: 200,
@@ -720,12 +760,14 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
   }
 
   void _showCompletionDialog() {
-    final percentage = (_score / concepts.length) * 100;
+    final percentage = (_score / geometryGameQuestions.length) * 100;
     final isPassed = percentage >= 50.0;
-    
-    // Save game progress
-    SharedPreferenceService.saveGameProgress('geometry_2', _score, concepts.length);
-    
+    // Save game progress at the end, just like fractions_screen.dart
+    developer.log('Saving game progress for geometry_2:');
+    developer.log('Score: $_score out of ${geometryGameQuestions.length}');
+    developer.log('Percentage: $percentage%');
+    developer.log('Is passed: $isPassed');
+    SharedPreferenceService.saveGameProgress('geometry_2', _score, geometryGameQuestions.length);
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -749,8 +791,8 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
             ],
           ),
           child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+            mainAxisSize: MainAxisSize.min,
+            children: [
               // Header with Icon
               Container(
                 padding: const EdgeInsets.all(16),
@@ -762,7 +804,7 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
                 ),
                 child: Icon(
                   isPassed ? Icons.emoji_events : Icons.school,
-                size: 48,
+                  size: 48,
                   color: isPassed ? Colors.green : Colors.orange,
                 ),
               ),
@@ -770,16 +812,16 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
               // Title
               Text(
                 isPassed ? 'Congratulations!' : 'Keep Practicing!',
-                  style: TextStyle(
+                style: TextStyle(
                   fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                   color: isPassed ? Colors.green : Colors.orange,
                 ),
               ),
               const SizedBox(height: 16),
               // Score Display
               Text(
-                'Score: $_score/${concepts.length} (${percentage.toStringAsFixed(1)}%)',
+                'Score: $_score/${geometryGameQuestions.length} (${percentage.toStringAsFixed(1)}%)',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -802,10 +844,10 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
                 alignment: WrapAlignment.center,
                 children: [
                   ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              Navigator.of(context).pop(); // Return to home screen
-            },
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
+                      Navigator.of(context).pop(); // Return to home screen
+                    },
                     icon: const Icon(Icons.home),
                     label: const Text('Go to Home'),
                     style: ElevatedButton.styleFrom(
@@ -817,29 +859,6 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
                       ),
                     ),
                   ),
-                  if (isPassed)
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop(); // Close dialog
-                        setState(() {
-                          _score = 0;
-                          _currentQuestion = 0;
-                          _showResult = false;
-                          _selectedAnswer = null;
-                          _options = _getRandomOptions(concepts[_currentQuestion]);
-                        });
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Play Again'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.secondary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ],

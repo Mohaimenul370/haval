@@ -193,9 +193,9 @@ class _NumbersTo10ScreenState extends State<NumbersTo10Screen> with SingleTicker
   void _showCompletionDialog() {
     final percentage = (score / questions.length) * 100;
     final isPassed = percentage >= 50.0;
-    
-    // Save game progress
-    SharedPreferenceService.saveGameProgress('numbers_to_10', score, questions.length);
+    // Add debug log
+    developer.log('Saving game progress for numbers: score=$score, total=${questions.length}, percentage=$percentage');
+    SharedPreferenceService.saveGameProgress('numbers', score, questions.length);
     
     showDialog(
       context: context,

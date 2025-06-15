@@ -5,22 +5,21 @@ import 'dart:async';
 class GameProgressService {
   static const String _scorePrefix = 'game_score_';
   static const String _completedPrefix = 'game_completed_';
-  static const List<String> requiredGames = [
-    'numbers_to_20',
-    'numbers_to_10',
-    'shapes',
+  static final List<String> requiredGames = [
     'fractions',
+    'numbers_to_20',
+    'numbers',
+    'shapes',
     'fractions_2',
-    'geometry',
-    'geometry_2',
     'measures',
-    'measures_2',
-    'positions',
-    'statistics',
+    'geometry',
     'time',
+    'statistics',
+    'measures_2',
+    'positions_2',
     'statistics_2',
+    'positions',
     'time_2',
-    'position_patterns_2',
   ];
 
   static SharedPreferences? _prefs;
