@@ -43,24 +43,20 @@ class Geometry2Screen extends StatefulWidget {
   State<Geometry2Screen> createState() => _Geometry2ScreenState();
 }
 
-class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProviderStateMixin {
+class _Geometry2ScreenState extends State<Geometry2Screen> with TickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  bool _isLoading = false;  // Set to false since we don't need to load game state initially
-  bool _isGameMode = false;  // Initialize as false to show lesson mode first
+  int _currentQuestionIndex = 0;
   int _score = 0;
-  int _currentQuestion = 0;
-  bool _showResult = false;
   String? _selectedAnswer;
-  bool isCorrect = false;
-  bool _isAnswering = false;  // Add this to prevent multiple taps
-  
-  // Game progress data
-  bool _hasExistingProgress = false;
-  int _highScore = 0;
-  double _completionPercentage = 0.0;
-  bool _isGameCompleted = false;
+  bool _showResult = false;
+  bool _isCorrect = false;
+  List<GeometryGameQuestion> _shuffledQuestions = [];
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  late AnimationController _answerAnimationController;
+  late Animation<double> _answerScaleAnimation;
+  late Animation<Color?> _answerColorAnimation;
+  List<String> _currentOptions = [];
 
   final List<GeometryConcept> concepts = [
     GeometryConcept(
@@ -128,7 +124,125 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
     ),
   ];
 
-  List<String> _options = [];
+  @override
+  void initState() {
+    super.initState();
+    _initializeTts();
+    _initializeAnimations();
+    if (widget.isGameMode) {
+      _startGame();
+    }
+  }
+
+  Future<void> _initializeTts() async {
+    await flutterTts.setLanguage("en-US");
+    await flutterTts.setPitch(1.0);
+    await flutterTts.setSpeechRate(0.5);
+  }
+
+  Future<void> _speakText(String text) async {
+    await flutterTts.speak(text);
+  }
+
+  void _initializeAnimations() {
+    // Question transition animation
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // Answer feedback animation
+    _answerAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _answerScaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _answerAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _answerColorAnimation = ColorTween(
+      begin: Colors.white,
+      end: Colors.green,
+    ).animate(
+      CurvedAnimation(
+        parent: _answerAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  List<String> _getShuffledOptions(GeometryGameQuestion question) {
+    // Create a list of options including the correct answer
+    final List<String> options = List.from(question.options);
+    
+    // Shuffle the options to randomize their order
+    options.shuffle();
+    
+    return options;
+  }
+
+  void _startGame() {
+    setState(() {
+      _score = 0;
+      _currentQuestionIndex = 0;
+      _selectedAnswer = null;
+      _showResult = false;
+      _shuffledQuestions = List.from(geometryGameQuestions)..shuffle();
+      _currentOptions = _getShuffledOptions(_shuffledQuestions[0]);
+      _animationController.reset();
+      _animationController.forward();
+    });
+  }
+
+  void _checkAnswer(String answer) {
+    setState(() {
+      _selectedAnswer = answer;
+      _showResult = true;
+      _isCorrect = answer == _shuffledQuestions[_currentQuestionIndex].correctAnswer;
+      _answerAnimationController.forward().then((_) {
+        _answerAnimationController.reverse();
+      });
+      if (_isCorrect) {
+        _score++;
+        _speakText('Correct! Well done!');
+      } else {
+        _speakText('Try again! The correct answer is ${_shuffledQuestions[_currentQuestionIndex].correctAnswer}');
+      }
+      if (_currentQuestionIndex < _shuffledQuestions.length - 1) {
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          _nextQuestion();
+        });
+      } else {
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          _showCompletionDialog();
+        });
+      }
+    });
+  }
+
+  void _nextQuestion() {
+    setState(() {
+      if (_currentQuestionIndex < _shuffledQuestions.length - 1) {
+        _currentQuestionIndex++;
+        _selectedAnswer = null;
+        _showResult = false;
+        _currentOptions = _getShuffledOptions(_shuffledQuestions[_currentQuestionIndex]);
+        _animationController.reset();
+        _animationController.forward();
+        _speakText('Next question!');
+      } else {
+        _showCompletionDialog();
+      }
+    });
+  }
 
   static Widget _buildSymmetryVisual() {
     return Container(
@@ -236,174 +350,6 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
   }
 
   @override
-  void initState() {
-    super.initState();
-    _initializeTts();
-    _initializeAnimation();
-    if (widget.isGameMode) {
-      _isGameMode = true;
-      _score = 0;
-      _currentQuestion = 0;
-      _showResult = false;
-      _selectedAnswer = null;
-      _options = _getRandomOptions(concepts[_currentQuestion]);
-    }
-  }
-
-  void _initializeAnimation() {
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-  }
-
-  Future<void> _initializeTts() async {
-    await flutterTts.setLanguage("en-US");
-    await flutterTts.setPitch(1.0);
-    await flutterTts.setSpeechRate(0.5);
-  }
-
-  Future<void> _speakText(String text) async {
-    await flutterTts.speak(text);
-  }
-
-  void _startGame() {
-    setState(() {
-      _isGameMode = true;
-      _score = 0;
-      _currentQuestion = 0;
-      _showResult = false;
-      _selectedAnswer = null;
-      _options = _getRandomOptions(concepts[_currentQuestion]); // Initialize options for the first question
-    });
-  }
-
-  // Save game state (during gameplay)
-  Future<void> _saveGameState() async {
-    try {
-      await SharedPreferenceService.setInt('geometry_2_current_question', _currentQuestion);
-      await SharedPreferenceService.setInt('geometry_2_score', _score);
-      await SharedPreferenceService.setBool('geometry_2_game_mode', _isGameMode);
-    } catch (e) {
-      developer.log('Error saving game state: $e');
-    }
-  }
-
-  // Save final game progress
-  Future<void> _saveGameProgress(int finalScore, int totalQuestions) async {
-    try {
-      developer.log('Saving final game progress:');
-      developer.log('Score: $finalScore/$totalQuestions');
-      
-      final success = await SharedPreferenceService.saveGameProgress('geometry_2', finalScore, totalQuestions);
-      
-      if (success) {
-        // Retrieve and update with the saved values
-        final savedScore = SharedPreferenceService.getGameScore('geometry_2');
-        final percentage = SharedPreferenceService.getGamePercentage('geometry_2');
-        final isCompleted = SharedPreferenceService.isGameCompleted('geometry_2');
-        
-        setState(() {
-          _highScore = savedScore;
-          _completionPercentage = percentage;
-          _isGameCompleted = isCompleted;
-          _hasExistingProgress = true;
-        });
-        
-        developer.log('Game progress saved successfully:');
-        developer.log('Percentage: $_completionPercentage%');
-        developer.log('Completed: $_isGameCompleted');
-      } else {
-        developer.log('Failed to save game progress');
-      }
-    } catch (e) {
-      developer.log('Error saving game progress: $e');
-    }
-  }
-
-  void _checkAnswer(String answer) {
-    if (_isAnswering) return;  // Prevent multiple taps
-    _isAnswering = true;
-
-    setState(() {
-      _selectedAnswer = answer;
-      _showResult = true;
-      isCorrect = answer == concepts[_currentQuestion].name;
-    });
-
-    // Start animation
-    _animationController.forward().then((_) {
-      _animationController.reverse();
-    });
-
-    if (isCorrect) {
-      _score++;
-      _speakText('Correct! ${concepts[_currentQuestion].description}');
-    } else {
-      _speakText('Try again! Think about the concept.');
-    }
-
-    // Move to next question after animation
-    Future.delayed(const Duration(milliseconds: 1000), () {
-      if (!mounted) return;
-      
-      if (_currentQuestion < concepts.length - 1) {
-        setState(() {
-          _currentQuestion++;
-          _selectedAnswer = null;
-          _showResult = false;
-          _isAnswering = false;
-          _options = _getRandomOptions(concepts[_currentQuestion]);
-        });
-        _speakText('Next question!');
-      } else {
-        _showCompletionDialog();
-      }
-    });
-  }
-
-  List<String> _getRandomOptions(GeometryConcept concept) {
-    // Create a list of all possible answers (all concept names)
-    final List<String> allOptions = concepts.map((c) => c.name).toList();
-    
-    // Remove the correct answer from the list
-    allOptions.remove(concept.name);
-    
-    // Shuffle the remaining options
-    allOptions.shuffle();
-    
-    // Take 3 wrong options
-    final List<String> wrongOptions = allOptions.take(3).toList();
-    
-    // Add the correct answer
-    final List<String> options = [...wrongOptions, concept.name];
-    
-    // Shuffle options once and store them
-    options.shuffle();
-    
-    // Return options
-    return options;
-  }
-
-  Color _getOptionColor(bool isSelected, bool isCorrect, bool isIncorrect) {
-    if (isCorrect) {
-      return Colors.green.withOpacity(0.9);
-    } else if (isIncorrect) {
-      return Colors.red.withOpacity(0.9);
-    } else if (isSelected) {
-      return Theme.of(context).colorScheme.primary.withOpacity(0.9);
-    } else {
-      return Theme.of(context).colorScheme.primary.withOpacity(0.7);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Color(0xFF6A1B9A),
@@ -412,16 +358,6 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
       systemNavigationBarIconBrightness: Brightness.light,
     ));
 
-    if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Advanced Geometry'),
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF6A1B9A),
@@ -521,245 +457,141 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
   }
 
   Widget _buildGameMode() {
-    if (_isGameCompleted) {
-      // Show popup dialog instead of full screen
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (BuildContext context) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Question ${_currentQuestionIndex + 1} of ${_shuffledQuestions.length}',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF6A1B9A),
               ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Score: $_score',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF6A1B9A),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ScaleTransition(
+              scale: _animation,
               child: Container(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.emoji_events,
-                      color: Color(0xFF6A1B9A),
-                      size: 64,
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Quiz Finished!',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF6A1B9A),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Your score: $_score / ${geometryGameQuestions.length}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        color: Color(0xFF6A1B9A),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).pop(); // Close dialog
-                            setState(() {
-                              _currentQuestion = 0;
-                              _score = 0;
-                              _selectedAnswer = null;
-                              _showResult = false;
-                              _isGameCompleted = false;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6A1B9A),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          ),
-                          child: const Text('Play Again'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).pop(); // Close dialog
-                            Navigator.of(context).pop(); // Return to main menu
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey[300],
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          ),
-                          child: const Text(
-                            'Main Menu',
-                            style: TextStyle(color: Colors.black87),
-                          ),
-                        ),
-                      ],
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 5,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-              ),
-            );
-          },
-        );
-      });
-      // Return empty container while dialog is showing
-      return const SizedBox.shrink();
-    }
-
-    final q = geometryGameQuestions[_currentQuestion];
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Question ${_currentQuestion + 1} of ${geometryGameQuestions.length}',
-            style: const TextStyle(fontSize: 18, color: Color(0xFF6A1B9A)),
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    'Question ${_currentQuestion + 1}/${geometryGameQuestions.length}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF6A1B9A),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: LinearProgressIndicator(
-                    value: (_currentQuestion + 1) / geometryGameQuestions.length,
-                    backgroundColor: Colors.grey.withOpacity(0.2),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6A1B9A)),
-                    minHeight: 8,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6A1B9A),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    'Score: $_score',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (q.visual != null)
-            Container(
-              height: 200,
-              width: 200,
-              child: q.visual,
-            ),
-          const SizedBox(height: 16),
-          Text(
-            q.question,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ...q.options.map((option) {
-            final isSelected = _selectedAnswer == option;
-            final isCorrect = _showResult && option == q.correctAnswer;
-            final isIncorrect = _showResult && isSelected && option != q.correctAnswer;
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                transform: Matrix4.identity()
-                  ..scale(_showResult && (isCorrect || isIncorrect) ? 1.05 : 1.0),
-                child: Card(
-                  elevation: _showResult && (isCorrect || isIncorrect) ? 8 : 2,
-                  color: isCorrect
-                      ? Colors.green.shade100
-                      : isIncorrect
-                          ? Colors.red.shade100
-                          : Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: isCorrect
-                          ? Colors.green
-                          : isIncorrect
-                              ? Colors.red
-                              : Colors.grey.shade300,
-                      width: _showResult && (isCorrect || isIncorrect) ? 2 : 1,
-                    ),
-                  ),
-                  child: ListTile(
-                    title: Text(
-                      option,
-                      style: TextStyle(
-                        color: isCorrect
-                            ? Colors.green.shade900
-                            : isIncorrect
-                                ? Colors.red.shade900
-                                : Colors.black87,
-                        fontWeight: _showResult && (isCorrect || isIncorrect)
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      AspectRatio(
+                        aspectRatio: 1.5,
+                        child: SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: _shuffledQuestions[_currentQuestionIndex].visual ?? Container(),
+                          ),
+                        ),
                       ),
-                    ),
-                    trailing: _showResult && (isCorrect || isIncorrect)
-                        ? Icon(
-                            isCorrect ? Icons.check_circle : Icons.cancel,
-                            color: isCorrect ? Colors.green : Colors.red,
-                          )
-                        : null,
-                    onTap: _showResult || _selectedAnswer != null
-                        ? null
-                        : () {
-                            setState(() {
-                              _selectedAnswer = option;
-                              _showResult = true;
-                              if (option == q.correctAnswer) _score++;
-                            });
-                            // Move to next question after animation
-                            Future.delayed(const Duration(milliseconds: 500), () {
-                              if (_currentQuestion < geometryGameQuestions.length - 1) {
-                                setState(() {
-                                  _currentQuestion++;
-                                  _selectedAnswer = null;
-                                  _showResult = false;
-                                });
-                              } else {
-                                setState(() {
-                                  _isGameCompleted = true;
-                                });
-                              }
-                            });
-                          },
+                      const SizedBox(height: 16),
+                      Text(
+                        _shuffledQuestions[_currentQuestionIndex].question,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF6A1B9A),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
               ),
-            );
-          }),
-        ],
+            ),
+            const SizedBox(height: 16),
+            Column(
+              children: _currentOptions.map((option) {
+                final isSelected = _selectedAnswer == option;
+                final isCorrectOption = _showResult && option == _shuffledQuestions[_currentQuestionIndex].correctAnswer;
+                final isIncorrect = _showResult && isSelected && !_isCorrect;
+                Color backgroundColor;
+                if (isCorrectOption) {
+                  backgroundColor = Colors.green;
+                } else if (isIncorrect) {
+                  backgroundColor = Colors.red;
+                } else if (isSelected) {
+                  backgroundColor = const Color(0xFF6A1B9A);
+                } else {
+                  backgroundColor = const Color(0xFF6A1B9A).withOpacity(0.1);
+                }
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: AnimatedBuilder(
+                    animation: _answerAnimationController,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: isSelected ? _answerScaleAnimation.value : 1.0,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFF6A1B9A),
+                              width: 2,
+                            ),
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: _showResult ? null : () => _checkAnswer(option),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Text(
+                                  option,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: isSelected || isCorrectOption || isIncorrect
+                                        ? Colors.white
+                                        : const Color(0xFF6A1B9A),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showCompletionDialog() {
+  void _showCompletionDialog() async {
     final percentage = (_score / geometryGameQuestions.length) * 100;
     final isPassed = percentage >= 50.0;
     // Save game progress at the end, just like fractions_screen.dart
@@ -767,7 +599,9 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
     developer.log('Score: $_score out of ${geometryGameQuestions.length}');
     developer.log('Percentage: $percentage%');
     developer.log('Is passed: $isPassed');
-    SharedPreferenceService.saveGameProgress('geometry_2', _score, geometryGameQuestions.length);
+    
+    final saveResult = await SharedPreferenceService.saveGameProgress('geometry_2', _score, geometryGameQuestions.length);
+    developer.log('Save result for geometry_2: $saveResult');
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -871,6 +705,7 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with SingleTickerProv
   @override
   void dispose() {
     _animationController.dispose();
+    _answerAnimationController.dispose();
     flutterTts.stop();
     super.dispose();
   }

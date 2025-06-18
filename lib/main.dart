@@ -217,9 +217,10 @@ class _HomeScreenState extends State<HomeScreen> {
       
       // For each required game, check if there's saved progress
       List<String> requiredGames = GameProgressService.requiredGames;
-      // Remove 'geometry_2' from required games if it exists
-      requiredGames.remove('geometry_2');
       int passedGames = 0;
+      
+      developer.log('Required games: $requiredGames');
+      developer.log('Total required games: ${requiredGames.length}');
       
       for (String gameId in requiredGames) {
         // Get game progress data
@@ -227,6 +228,8 @@ class _HomeScreenState extends State<HomeScreen> {
         final totalQuestions = SharedPreferenceService.getTotalQuestions(gameId);
         final percentage = SharedPreferenceService.getGamePercentage(gameId);
         final isCompleted = SharedPreferenceService.isGameCompleted(gameId);
+        
+        developer.log('Game $gameId: score=$score, total=$totalQuestions, percentage=$percentage%, completed=$isCompleted');
         
         // Store in maps
         scores[gameId] = percentage;
@@ -245,12 +248,12 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      // Calculate overall completion percentage (now out of 14 chapters)
-      final percentage = ((passedGames / 14) * 100).toStringAsFixed(1);
-      developer.log('Overall progress: $percentage% ($passedGames/14 games)');
+      // Calculate overall completion percentage (now out of 15 chapters)
+      final percentage = ((passedGames / 15) * 100).toStringAsFixed(1);
+      developer.log('Overall progress: $percentage% ($passedGames/15 games)');
       
       // Check if Math Play should be accessible
-      final canAccess = passedGames >= 14;
+      final canAccess = passedGames >= 15;
       developer.log('Math Play access: ${canAccess ? 'GRANTED' : 'DENIED'}');
 
       // Update UI if component is still mounted
@@ -380,7 +383,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final requiredGames = GameProgressService.requiredGames;
     final passedGames = requiredGames.where((gameId) {
       final percent = _gameScores[gameId] ?? 0.0;
-      return percent >= 50.0;
+      final isCompleted = _gameCompleted[gameId] ?? false;
+      return isCompleted || percent >= 50.0;
     }).length;
     final progress = requiredGames.isNotEmpty ? passedGames / requiredGames.length : 0.0;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -680,6 +684,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           _buildChapterCard(
                             context,
+                            icon: Icons.architecture_outlined,
+                            label: 'Geometry 2',
+                            color: const Color(0xFF607D8B),
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/geometry_2');
+                              if (mounted) _loadScores();
+                            },
+                          ),
+                          _buildChapterCard(
+                            context,
                             icon: _canAccessMathPlay ? Icons.emoji_events : Icons.lock,
                             label: 'Math Play',
                             color: const Color(0xFF673AB7),
@@ -735,7 +749,7 @@ class _HomeScreenState extends State<HomeScreen> {
             color: color,
           ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center, 
             children: [
               Icon(
                 icon,

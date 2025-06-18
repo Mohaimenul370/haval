@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/menu_card.dart';
+import 'main_menu_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -64,47 +65,25 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                children: [
-                  MenuCard(
-                    icon: Icons.looks_one,
-                    color: Colors.green,
-                    title: 'Numbers',
-                    subtitle: 'Learn to count',
-                    onTap: () => Navigator.pushNamed(context, '/numbers'),
-                  ),
-                  MenuCard(
-                    icon: Icons.category,
-                    color: Colors.orange,
-                    title: 'Shapes',
-                    subtitle: 'Learn shapes',
-                    onTap: () => Navigator.pushNamed(context, '/shapes'),
-                  ),
-                  MenuCard(
-                    icon: Icons.pie_chart,
-                    color: Colors.purple,
-                    title: 'Fractions',
-                    subtitle: 'Learn fractions',
-                    onTap: () => Navigator.pushNamed(context, '/fractions'),
-                  ),
-                  MenuCard(
-                    icon: Icons.analytics,
-                    color: Colors.teal,
-                    title: 'Learning Analysis',
-                    subtitle: 'Track your progress',
-                    onTap: () => Navigator.pushNamed(context, '/analysis'),
-                  ),
-                  MenuCard(
-                    icon: Icons.settings,
-                    color: Colors.red,
-                    title: 'Settings',
-                    subtitle: 'App settings',
-                    onTap: () => Navigator.pushNamed(context, '/settings'),
-                  ),
-                ],
+              child: GridView.builder(
+                padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.2,
+                ),
+                itemCount: chapters.length,
+                itemBuilder: (context, index) {
+                  final chapter = chapters[index];
+                  return MenuCard(
+                    icon: chapter['icon'] as IconData,
+                    color: _getColorForIndex(index),
+                    title: chapter['title'] as String,
+                    subtitle: 'Learn ${chapter['title']}',
+                    onTap: () => Navigator.pushNamed(context, chapter['route'] as String),
+                  );
+                },
               ),
             ),
           ],
@@ -115,5 +94,26 @@ class HomeScreen extends StatelessWidget {
         color: const Color(0xFF6A1B9A),
       ),
     );
+  }
+
+  Color _getColorForIndex(int index) {
+    final colors = [
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.red,
+      Colors.blue,
+      Colors.pink,
+      Colors.indigo,
+      Colors.amber,
+      Colors.cyan,
+      Colors.deepPurple,
+      Colors.lightBlue,
+      Colors.lime,
+      Colors.deepOrange,
+      Colors.brown,
+    ];
+    return colors[index % colors.length];
   }
 } 

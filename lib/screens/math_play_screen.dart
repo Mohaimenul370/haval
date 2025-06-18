@@ -55,6 +55,7 @@ class _MathPlayScreenState extends State<MathPlayScreen> {
       'Statistics 2',
       'Positions',
       'Time 2',
+      'Geometry 2',
     ];
     return Scaffold(
       appBar: AppBar(
@@ -80,7 +81,7 @@ class _MathPlayScreenState extends State<MathPlayScreen> {
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
-                  'Complete all 14 chapters to unlock Math Play!',
+                  'Complete all 15 chapters to unlock Math Play!',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

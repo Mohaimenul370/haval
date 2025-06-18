@@ -20,6 +20,7 @@ class GameProgressService {
     'statistics_2',
     'positions',
     'time_2',
+    'geometry_2',
   ];
 
   static SharedPreferences? _prefs;
