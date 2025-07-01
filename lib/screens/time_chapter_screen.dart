@@ -1,103 +1,115 @@
 import 'package:flutter/material.dart';
-import 'time_screen.dart';
-import 'dart:developer' as developer;
+import 'home_screen.dart';
+import '../main.dart';
 
 class TimeChapterScreen extends StatelessWidget {
   const TimeChapterScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Learning Time',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const HomeScreen(),
           ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () {},
+        );
+        return false;
+      },
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: true,
+          title: const Text(
+            'Learning Time',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
           ),
-        ],
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF7B2FF2), Color(0xFFf357a8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const HomeScreen(),
+                ),
+              );
+            },
+          ),
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF7B2FF2), Color(0xFFf357a8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
           ),
         ),
-      ),
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
+        body: Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 32),
-              const Text(
-                'Time',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF7B2FF2),
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 32),
+                const Text(
+                  'Time',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF7B2FF2),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Choose your learning path',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF7B2FF2),
-                  fontWeight: FontWeight.w500,
+                const SizedBox(height: 8),
+                const Text(
+                  'Choose your learning path',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF7B2FF2),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 32),
-              _buildModeCard(
-                context,
-                'Learn Time',
-                Icons.menu_book,
-                'Interactive lessons and tutorials',
-                () => Navigator.pushNamed(context, '/time_learn'),
-              ),
-              const SizedBox(height: 20),
-              _buildModeCard(
-                context,
-                'Practice Game',
-                Icons.videogame_asset,
-                'Fun games to test your knowledge',
-                () => Navigator.pushNamed(context, '/time_game'),
-              ),
-              const Spacer(),
-              Opacity(
-                opacity: 0.08,
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Icon(Icons.square, size: 100, color: Color(0xFF7B2FF2)),
+                const SizedBox(height: 32),
+                _buildModeCard(
+                  context,
+                  'Learn Time',
+                  Icons.menu_book,
+                  'Interactive lessons and tutorials',
+                  () => Navigator.pushNamed(context, '/time_learn'),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 20),
+                _buildModeCard(
+                  context,
+                  'Practice Game',
+                  Icons.videogame_asset,
+                  'Fun games to test your knowledge',
+                  () => Navigator.pushNamed(context, '/time_game'),
+                ),
+                const Spacer(),
+                Opacity(
+                  opacity: 0.08,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Icon(Icons.square, size: 100, color: Color(0xFF7B2FF2)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:developer' as developer;
 import '../services/shared_preference_service.dart';
 import 'package:flutter/services.dart';
@@ -12,12 +13,14 @@ class GeometryConcept {
   final String description;
   final Widget visual;
   final String example;
+  final String section;
 
   GeometryConcept({
     required this.name,
     required this.description,
     required this.visual,
     required this.example,
+    required this.section,
   });
 }
 
@@ -25,13 +28,15 @@ class GeometryGameQuestion {
   final String question;
   final String correctAnswer;
   final List<String> options;
-  final Widget? visual;
+  final Widget visual;
+  final String explanation;
 
   GeometryGameQuestion({
     required this.question,
     required this.correctAnswer,
     required this.options,
-    this.visual,
+    required this.visual,
+    required this.explanation,
   });
 }
 
@@ -57,70 +62,192 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with TickerProviderSt
   late Animation<double> _answerScaleAnimation;
   late Animation<Color?> _answerColorAnimation;
   List<String> _currentOptions = [];
+  String selectedSection = '3D Shapes';
 
   final List<GeometryConcept> concepts = [
     GeometryConcept(
-      name: 'Symmetry',
-      description: 'A shape has symmetry when one half is a mirror image of the other half',
-      visual: _buildSymmetryVisual(),
-      example: 'A butterfly has line symmetry',
+      name: 'Cube Properties',
+      description: 'A cube has 6 flat faces, all faces are square shaped, and all edges are equal.',
+      visual: _build3DShapeVisual('cube'),
+      example: 'Count the faces and edges: 6 faces, 12 edges',
+      section: '3D Shapes',
     ),
     GeometryConcept(
-      name: 'Angles',
-      description: 'Angles are formed when two lines meet at a point',
-      visual: _buildAnglesVisual(),
-      example: 'A right angle is 90 degrees',
+      name: 'Cuboid Properties',
+      description: 'A cuboid has 6 flat faces, faces can be rectangles, and edges may not be equal.',
+      visual: _build3DShapeVisual('cuboid'),
+      example: 'Compare with cube: Different face shapes, different edge lengths',
+      section: '3D Shapes',
     ),
     GeometryConcept(
-      name: 'Perimeter',
-      description: 'The total distance around the outside of a shape',
-      visual: _buildPerimeterVisual(),
-      example: 'The perimeter of a square is the sum of all its sides',
+      name: 'Pyramid Types',
+      description: 'Pyramids can have different base shapes with triangular faces meeting at a point.',
+      visual: _build3DShapeVisual('pyramid'),
+      example: 'Square base pyramid: 1 square face, 4 triangle faces',
+      section: '3D Shapes',
     ),
     GeometryConcept(
-      name: 'Area',
-      description: 'The amount of space inside a shape',
-      visual: _buildAreaVisual(),
-      example: 'The area of a rectangle is length times width',
+      name: 'Sphere vs Cylinder',
+      description: 'Compare curved surfaces: Sphere rolls in any direction, cylinder rolls one way.',
+      visual: _build3DShapeVisual('sphere_cylinder'),
+      example: 'Cylinder: 2 flat circular faces, 1 curved surface',
+      section: '3D Shapes',
     ),
     GeometryConcept(
-      name: '3D Shapes',
-      description: 'Shapes that have length, width, and height',
-      visual: _build3DShapesVisual(),
-      example: 'A cube has 6 square faces',
+      name: 'Building with Shapes',
+      description: 'Combine 3D shapes to create towers and structures that stand.',
+      visual: _build3DShapeVisual('tower'),
+      example: 'Stack cubes to count faces: More cubes = fewer visible faces',
+      section: '3D Shapes',
+    ),
+    GeometryConcept(
+      name: 'Shape Rotation',
+      description: 'Some 2D shapes look different when turned around but are still the same shape.',
+      visual: _build2DShapeVisual('rotation'),
+      example: 'Rectangle looks different when rotated, still a rectangle',
+      section: '2D Shapes',
+    ),
+    GeometryConcept(
+      name: 'Shape Patterns',
+      description: 'Create patterns by arranging 2D shapes with no gaps between them.',
+      visual: _build2DShapeVisual('pattern'),
+      example: 'Squares fit together perfectly with no spaces',
+      section: '2D Shapes',
+    ),
+    GeometryConcept(
+      name: 'Triangle Patterns',
+      description: 'Make larger triangles using smaller triangles in different arrangements.',
+      visual: _build2DShapeVisual('triangles'),
+      example: 'Use two colors to create triangle patterns',
+      section: '2D Shapes',
+    ),
+    GeometryConcept(
+      name: 'Square Construction',
+      description: 'Build squares using equal sides and right angles.',
+      visual: _build2DShapeVisual('square'),
+      example: 'Four equal sticks make a square',
+      section: '2D Shapes',
+    ),
+    GeometryConcept(
+      name: '2D from 3D',
+      description: 'Identify and draw the flat shapes you see on 3D objects.',
+      visual: _build2DShapeVisual('faces'),
+      example: 'Draw the circle face of a cylinder',
+      section: '2D Shapes',
     ),
   ];
 
   final List<GeometryGameQuestion> geometryGameQuestions = [
+    // Question 1: 3D Shape Faces
     GeometryGameQuestion(
-      question: 'What is shown in this shape?',
-      correctAnswer: 'Symmetry',
-      options: ['Circle', 'Symmetry', 'Square', 'Angle'],
-      visual: _buildSymmetryVisual(),
+      question: 'Look at this cube. The colored sides are its faces.\nHow many faces can you count in total?',
+      correctAnswer: '6 faces',
+      options: ['4 faces', '5 faces', '6 faces', '8 faces'],
+      visual: Container(
+        width: 200,
+        height: 200,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.purple[50],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: SvgPicture.asset(
+          'assets/images/geometry/cube_faces.svg',
+          fit: BoxFit.contain,
+        ),
+      ),
+      explanation: 'A cube has 6 faces - front, back, top, bottom, left, and right. Each face is a square. You can see 3 faces, and there are 3 more on the other side!',
     ),
+    
+    // Question 2: 2D Shape Pattern
     GeometryGameQuestion(
-      question: 'What is shown in this shape?',
-      correctAnswer: 'Angle',
-      options: ['Line', 'Circle', 'Angle', 'Square'],
-      visual: _buildAnglesVisual(),
+      question: 'Which shape pattern has NO gaps between the shapes?',
+      correctAnswer: 'Squares',
+      options: ['Circles', 'Squares', 'Pentagons', 'Hexagons'],
+      visual: Container(
+        width: 200,
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.purple[50],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: GridView.count(
+          crossAxisCount: 3,
+          padding: const EdgeInsets.all(20),
+          children: List.generate(9, (index) {
+            return Container(
+              margin: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.purple[200],
+                border: Border.all(color: Colors.purple),
+              ),
+            );
+          }),
+        ),
+      ),
+      explanation: 'Squares fit together perfectly with no gaps between them.',
     ),
+    
+    // Question 3: 3D Shape Rolling
     GeometryGameQuestion(
-      question: 'What is shown around this shape?',
-      correctAnswer: 'Perimeter',
-      options: ['Area', 'Line', 'Perimeter', 'Angle'],
-      visual: _buildPerimeterVisual(),
+      question: 'Look at this round shape. Which 3D shape is it that can roll in ALL directions?',
+      correctAnswer: 'Sphere',
+      options: ['Cube', 'Cylinder', 'Sphere', 'Pyramid'],
+      visual: Container(
+        width: 200,
+        height: 200,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.purple[50],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: SvgPicture.asset(
+          'assets/images/geometry/sphere.svg',
+          fit: BoxFit.contain,
+        ),
+      ),
+      explanation: 'A sphere (like a ball) can roll in any direction because it is round all over. The arrows show it can roll in every direction!',
     ),
+    
+    // Question 4: Triangle Patterns
     GeometryGameQuestion(
-      question: 'What is shown inside this shape?',
-      correctAnswer: 'Area',
-      options: ['Line', 'Area', 'Perimeter', 'Angle'],
-      visual: _buildAreaVisual(),
+      question: 'How many small triangles make up this large triangle?',
+      correctAnswer: '4 triangles',
+      options: ['2 triangles', '3 triangles', '4 triangles', '6 triangles'],
+      visual: Container(
+        width: 200,
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.purple[50],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: CustomPaint(
+          painter: TrianglePatternPainter(),
+          size: const Size(160, 160),
+        ),
+      ),
+      explanation: 'The large triangle is made up of 4 smaller triangles arranged in a pattern.',
     ),
+    
+    // Question 5: 3D Shape Base
     GeometryGameQuestion(
-      question: 'What type of shape is shown?',
-      correctAnswer: '3D Shape',
-      options: ['2D Shape', 'Line', 'Angle', '3D Shape'],
-      visual: _build3DShapesVisual(),
+      question: 'Look at the bottom of this pyramid.\nWhat shape is its base (the bottom part it stands on)?',
+      correctAnswer: 'Square',
+      options: ['Triangle', 'Square', 'Rectangle', 'Circle'],
+      visual: Container(
+        width: 200,
+        height: 200,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.purple[50],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: SvgPicture.asset(
+          'assets/images/geometry/pyramid_base.svg',
+          fit: BoxFit.contain,
+        ),
+      ),
+      explanation: 'This pyramid has a square base (bottom). The base is the flat part that the pyramid stands on, and it\'s clearly a square shape!',
     ),
   ];
 
@@ -145,7 +272,6 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with TickerProviderSt
   }
 
   void _initializeAnimations() {
-    // Question transition animation
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -157,7 +283,6 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with TickerProviderSt
       ),
     );
 
-    // Answer feedback animation
     _answerAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -180,12 +305,8 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with TickerProviderSt
   }
 
   List<String> _getShuffledOptions(GeometryGameQuestion question) {
-    // Create a list of options including the correct answer
     final List<String> options = List.from(question.options);
-    
-    // Shuffle the options to randomize their order
     options.shuffle();
-    
     return options;
   }
 
@@ -358,6 +479,126 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with TickerProviderSt
       systemNavigationBarIconBrightness: Brightness.light,
     ));
 
+    if (widget.isGameMode) {
+      return _buildGameModeScreen();
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF6A1B9A),
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Geometry 2',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Color(0xFF6A1B9A),
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: Color(0xFF6A1B9A),
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
+      ),
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: selectedSection == '3D Shapes' ? Colors.purple : Colors.grey,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  onPressed: () => setState(() => selectedSection = '3D Shapes'),
+                  child: const Text('3D Shapes'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: selectedSection == '2D Shapes' ? Colors.purple : Colors.grey,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  onPressed: () => setState(() => selectedSection = '2D Shapes'),
+                  child: const Text('2D Shapes'),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: concepts.length,
+              itemBuilder: (context, index) {
+                final concept = concepts[index];
+                if (concept.section == selectedSection) {
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            concept.name,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.purple,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            concept.description,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                          const SizedBox(height: 16),
+                          Center(child: concept.visual),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.purple[50],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.lightbulb, color: Colors.purple),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Example: ${concept.example}',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                return Container();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGameModeScreen() {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF6A1B9A),
@@ -389,70 +630,9 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with TickerProviderSt
           ),
         ),
         child: SafeArea(
-          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
+          child: _buildGameMode(),
         ),
       ),
-    );
-  }
-
-  Widget _buildLearningMode() {
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-          child: Text(
-            'Learn Geometry',
-            style: TextStyle(
-              fontSize: 24,
-              color: Color(0xFF6A1B9A),
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: concepts.map((concept) {
-                  return Card(
-                    color: Colors.white,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(child: concept.visual),
-                          const SizedBox(height: 12),
-                          Text(
-                            concept.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF6A1B9A),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            concept.description,
-                            style: const TextStyle(fontSize: 16, color: Color(0xFF6A1B9A)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -504,7 +684,7 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with TickerProviderSt
                         child: SingleChildScrollView(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                            child: _shuffledQuestions[_currentQuestionIndex].visual ?? Container(),
+                            child: _shuffledQuestions[_currentQuestionIndex].visual,
                           ),
                         ),
                       ),
@@ -591,114 +771,150 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with TickerProviderSt
     );
   }
 
-  void _showCompletionDialog() async {
-    final percentage = (_score / geometryGameQuestions.length) * 100;
+  void _showCompletionDialog() {
+    final percentage = (_score / _shuffledQuestions.length) * 100;
     final isPassed = percentage >= 50.0;
-    // Save game progress at the end, just like fractions_screen.dart
-    developer.log('Saving game progress for geometry_2:');
-    developer.log('Score: $_score out of ${geometryGameQuestions.length}');
-    developer.log('Percentage: $percentage%');
-    developer.log('Is passed: $isPassed');
     
-    final saveResult = await SharedPreferenceService.saveGameProgress('geometry_2', _score, geometryGameQuestions.length);
-    developer.log('Save result for geometry_2: $saveResult');
+    // Save the game progress (SharedPreferenceService handles the 50% threshold automatically)
+    SharedPreferenceService.saveGameProgress('geometry_2', _score, _shuffledQuestions.length).then((_) {
+      _showDialog(percentage, isPassed);
+    }).catchError((error) {
+      // Handle any errors that occur while saving
+      print('Error saving game progress: $error');
+      _showDialog(percentage, isPassed);
+    });
+  }
+
+  void _showDialog(double percentage, bool isPassed) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header with Icon
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isPassed 
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.orange.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isPassed ? Icons.emoji_events : Icons.school,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.purple[50],
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isPassed ? Icons.celebration : Icons.sentiment_dissatisfied,
+                  color: isPassed ? Colors.purple : Colors.orange,
                   size: 48,
-                  color: isPassed ? Colors.green : Colors.orange,
                 ),
-              ),
-              const SizedBox(height: 24),
-              // Title
-              Text(
-                isPassed ? 'Congratulations!' : 'Keep Practicing!',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: isPassed ? Colors.green : Colors.orange,
+                const SizedBox(height: 16),
+                Text(
+                  isPassed ? 'Congratulations! 🎉' : 'Keep Trying! 💪',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: isPassed ? Colors.purple : Colors.orange,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              // Score Display
-              Text(
-                'Score: $_score/${geometryGameQuestions.length} (${percentage.toStringAsFixed(1)}%)',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isPassed ? Colors.purple[100] : Colors.orange[100],
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.star,
+                            color: isPassed ? Colors.amber : Colors.orange,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Score: $_score/${_shuffledQuestions.length}',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: isPassed ? Colors.purple : Colors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${percentage.toStringAsFixed(0)}%',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: isPassed ? Colors.purple : Colors.orange,
+                        ),
+                      ),
+                      if (!isPassed) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'You need 50% to pass',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.orange[700],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              // Message
-              Text(
-                isPassed
-                  ? 'You\'ve completed the Geometry-2 practice!'
-                  : 'You\'re making progress! Keep practicing to improve.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 24),
-              // Buttons
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                alignment: WrapAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close dialog
-                      Navigator.of(context).pop(); // Return to home screen
-                    },
-                    icon: const Icon(Icons.home),
-                    label: const Text('Go to Home'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.purple,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          side: const BorderSide(color: Colors.purple),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop(); // Close dialog
+                        Navigator.of(context).pop(); // Return to chapter screen
+                      },
+                      child: const Text(
+                        'Back',
+                        style: TextStyle(fontSize: 16),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _startGame();
+                      },
+                      child: const Text(
+                        'Play Again',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -708,6 +924,78 @@ class _Geometry2ScreenState extends State<Geometry2Screen> with TickerProviderSt
     _answerAnimationController.dispose();
     flutterTts.stop();
     super.dispose();
+  }
+
+  static Widget _build3DShapeVisual(String type) {
+    return Container(
+      width: 200,
+      height: 200,
+      decoration: BoxDecoration(
+        color: Colors.purple[50],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              type == 'cube' ? Icons.crop_square_sharp :
+              type == 'cuboid' ? Icons.rectangle :
+              type == 'pyramid' ? Icons.change_history :
+              type == 'sphere_cylinder' ? Icons.circle :
+              Icons.architecture,
+              size: 80,
+              color: Colors.purple,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              type.replaceAll('_', ' ').toUpperCase(),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.purple,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _build2DShapeVisual(String type) {
+    return Container(
+      width: 200,
+      height: 200,
+      decoration: BoxDecoration(
+        color: Colors.purple[50],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              type == 'rotation' ? Icons.rotate_right :
+              type == 'pattern' ? Icons.grid_on :
+              type == 'triangles' ? Icons.change_history :
+              type == 'square' ? Icons.crop_square :
+              Icons.face,
+              size: 80,
+              color: Colors.purple,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              type.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.purple,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -721,7 +1009,6 @@ class SymmetryPainter extends CustomPainter {
 
     final center = Offset(size.width / 2, size.height / 2);
     
-    // Draw butterfly shape
     final path = Path()
       ..moveTo(center.dx, center.dy - 50)
       ..quadraticBezierTo(center.dx + 30, center.dy - 30, center.dx + 20, center.dy)
@@ -731,7 +1018,6 @@ class SymmetryPainter extends CustomPainter {
 
     canvas.drawPath(path, paint);
     
-    // Draw symmetry line
     canvas.drawLine(
       Offset(center.dx, center.dy - 60),
       Offset(center.dx, center.dy + 60),
@@ -753,7 +1039,6 @@ class AnglesPainter extends CustomPainter {
 
     final center = Offset(size.width / 2, size.height / 2);
     
-    // Draw right angle
     canvas.drawLine(
       Offset(center.dx - 30, center.dy),
       center,
@@ -765,7 +1050,6 @@ class AnglesPainter extends CustomPainter {
       paint,
     );
     
-    // Draw arc for angle
     canvas.drawArc(
       Rect.fromCenter(center: center, width: 40, height: 40),
       -90 * 3.14159 / 180,
@@ -789,13 +1073,11 @@ class PerimeterPainter extends CustomPainter {
 
     final center = Offset(size.width / 2, size.height / 2);
     
-    // Draw rectangle
     canvas.drawRect(
       Rect.fromCenter(center: center, width: 80, height: 60),
       paint,
     );
     
-    // Draw arrows around perimeter
     final arrowPaint = Paint()
       ..color = Colors.red
       ..style = PaintingStyle.stroke
@@ -837,13 +1119,11 @@ class AreaPainter extends CustomPainter {
 
     final center = Offset(size.width / 2, size.height / 2);
     
-    // Draw rectangle
     canvas.drawRect(
       Rect.fromCenter(center: center, width: 80, height: 60),
       paint,
     );
     
-    // Draw grid inside rectangle
     final gridPaint = Paint()
       ..color = Colors.blue.withOpacity(0.3)
       ..style = PaintingStyle.stroke
@@ -879,7 +1159,6 @@ class ThreeDShapesPainter extends CustomPainter {
 
     final center = Offset(size.width / 2, size.height / 2);
     
-    // Draw cube
     final path = Path()
       ..moveTo(center.dx - 30, center.dy - 30)
       ..lineTo(center.dx + 30, center.dy - 30)
@@ -898,6 +1177,73 @@ class ThreeDShapesPainter extends CustomPainter {
       ..moveTo(center.dx - 30, center.dy + 30)
       ..lineTo(center.dx - 20, center.dy + 40);
 
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// Custom Painter for Triangle Pattern
+class TrianglePatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.purple
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final path = Path();
+    
+    // Large triangle
+    path.moveTo(size.width / 2, 20);
+    path.lineTo(20, size.height - 20);
+    path.lineTo(size.width - 20, size.height - 20);
+    path.close();
+    
+    // Internal lines
+    path.moveTo(size.width / 2, 20);
+    path.lineTo(size.width / 2, size.height - 20);
+    path.moveTo((size.width / 2 + 20) / 2, (size.height + 20) / 2);
+    path.lineTo((size.width / 2 + size.width - 20) / 2, (size.height + 20) / 2);
+    
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// Custom Painter for Pyramid
+class PyramidPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.purple
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final path = Path();
+    
+    // Base (square)
+    path.moveTo(40, size.height - 40);
+    path.lineTo(size.width - 40, size.height - 40);
+    path.lineTo(size.width - 40, size.height - 40);
+    path.lineTo(40, size.height - 40);
+    path.close();
+    
+    // Lines to apex
+    path.moveTo(size.width / 2, 40);
+    path.lineTo(40, size.height - 40);
+    path.moveTo(size.width / 2, 40);
+    path.lineTo(size.width - 40, size.height - 40);
+    
+    // Dotted lines for hidden edges
+    final dashPaint = Paint()
+      ..color = Colors.purple.withOpacity(0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    
     canvas.drawPath(path, paint);
   }
 

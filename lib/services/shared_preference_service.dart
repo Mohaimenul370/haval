@@ -2,8 +2,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
 
 class SharedPreferenceService {
-  static late SharedPreferences _prefs;
+  static SharedPreferences? _prefs;
   static bool _isInitialized = false;
+  static const String _mathPlayKey = 'math_play_percentage';
+
+  static const List<String> allChapters = [
+    'numbers_to_10',
+    'numbers_to_20',
+    'shapes',
+    'fractions',
+    'fractions_2',
+    'geometry',
+    'geometry_2',
+    'measures',
+    'measures_2',
+    'positions',
+    'statistics',
+    'time',
+    'statistics_2',
+    'time_2',
+    'position_patterns_2'
+  ];
 
   // Initialize SharedPreferences
   static Future<void> initialize() async {
@@ -25,21 +44,16 @@ class SharedPreferenceService {
     developer.log('Score: $score out of $totalQuestions');
     
     final percentage = totalQuestions > 0 ? (score / totalQuestions) * 100 : 0.0;
-    final isCompleted = score >= (totalQuestions / 2);
+    final isCompleted = percentage >= 50.0;
     
     developer.log('Percentage: $percentage%');
     developer.log('Is completed: $isCompleted');
     
     // Save all relevant data
-    await _prefs.setInt('${gameId}_score', score);
-    await _prefs.setInt('${gameId}_totalQuestions', totalQuestions);
-    await _prefs.setDouble('${gameId}_percentage', percentage);
-    await _prefs.setBool('${gameId}_completed', isCompleted);
+    await setGamePercentage(gameId, percentage);
+    await setGameCompleted(gameId, isCompleted);
     
-    // Commit changes to ensure they're written to disk
-    final success = await commit();
-    developer.log('SharedPreferenceService save for $gameId success: $success');
-    return success;
+    return true;
   }
 
   // Get game score
@@ -48,7 +62,7 @@ class SharedPreferenceService {
       developer.log('Warning: Trying to get game score before initialization');
       return 0;
     }
-    final score = _prefs.getInt('${gameId}_score') ?? 0;
+    final score = _prefs!.getInt('${gameId}_score') ?? 0;
     developer.log('Getting game score for $gameId: $score');
     return score;
   }
@@ -59,7 +73,7 @@ class SharedPreferenceService {
       developer.log('Warning: Trying to get total questions before initialization');
       return 0;
     }
-    final total = _prefs.getInt('${gameId}_totalQuestions') ?? 0;
+    final total = _prefs!.getInt('${gameId}_totalQuestions') ?? 0;
     developer.log('Getting total questions for $gameId: $total');
     return total;
   }
@@ -70,9 +84,32 @@ class SharedPreferenceService {
       developer.log('Warning: Trying to get game percentage before initialization');
       return 0.0;
     }
-    final percentage = _prefs.getDouble('${gameId}_percentage') ?? 0.0;
+    
+    // Special handling for Numbers to 10 chapter
+    if (gameId == 'numbers_to_10') {
+      final percentage = _prefs!.getDouble('${gameId}_score') ?? 
+                        _prefs!.getDouble('${gameId}_percentage') ?? 0.0;
+      developer.log('Getting game percentage for $gameId: $percentage%');
+      return percentage;
+    }
+    
+    final percentage = _prefs!.getDouble('${gameId}_score') ?? 0.0;
     developer.log('Getting game percentage for $gameId: $percentage%');
     return percentage;
+  }
+
+  // Set game percentage for a specific chapter/game
+  static Future<void> setGamePercentage(String gameId, double percentage) async {
+    if (!_isInitialized) await initialize();
+    developer.log('Setting game percentage for $gameId: $percentage%');
+    
+    // Special handling for Numbers to 10 chapter
+    if (gameId == 'numbers_to_10') {
+      await _prefs!.setDouble('${gameId}_percentage', percentage);
+    }
+    
+    await _prefs!.setDouble('${gameId}_score', percentage);
+    await _updateOverallProgress();
   }
 
   // Check if game is completed
@@ -81,9 +118,17 @@ class SharedPreferenceService {
       developer.log('Warning: Trying to check game completion before initialization');
       return false;
     }
-    final isCompleted = _prefs.getBool('${gameId}_completed') ?? false;
+    final isCompleted = _prefs!.getBool('${gameId}_completed') ?? false;
     developer.log('Checking if game $gameId is completed: $isCompleted');
     return isCompleted;
+  }
+
+  // Set completion status for a specific chapter/game
+  static Future<void> setGameCompleted(String gameId, bool completed) async {
+    if (!_isInitialized) await initialize();
+    developer.log('Setting game completion for $gameId: $completed');
+    await _prefs!.setBool('${gameId}_completed', completed);
+    await _updateOverallProgress();
   }
   
   // Get all game IDs with saved progress
@@ -96,7 +141,7 @@ class SharedPreferenceService {
     final Set<String> gameIds = {};
     final keyPattern = RegExp(r'(.+)_score');
     
-    for (final key in _prefs.getKeys()) {
+    for (final key in _prefs!.getKeys()) {
       final match = keyPattern.firstMatch(key);
       if (match != null && match.groupCount >= 1) {
         gameIds.add(match.group(1)!);
@@ -113,7 +158,7 @@ class SharedPreferenceService {
   static Future<bool> setInt(String key, int value) async {
     if (!_isInitialized) await initialize();
     developer.log('Setting int: $key = $value');
-    return await _prefs.setInt(key, value);
+    return await _prefs!.setInt(key, value);
   }
 
   // Get an integer value
@@ -122,7 +167,7 @@ class SharedPreferenceService {
       developer.log('Warning: Trying to get int value before initialization');
       return null;
     }
-    final value = _prefs.getInt(key);
+    final value = _prefs!.getInt(key);
     developer.log('Getting int: $key = $value');
     return value;
   }
@@ -131,7 +176,7 @@ class SharedPreferenceService {
   static Future<bool> setBool(String key, bool value) async {
     if (!_isInitialized) await initialize();
     developer.log('Setting bool: $key = $value');
-    return await _prefs.setBool(key, value);
+    return await _prefs!.setBool(key, value);
   }
 
   // Get a boolean value
@@ -140,7 +185,7 @@ class SharedPreferenceService {
       developer.log('Warning: Trying to get bool value before initialization');
       return null;
     }
-    final value = _prefs.getBool(key);
+    final value = _prefs!.getBool(key);
     developer.log('Getting bool: $key = $value');
     return value;
   }
@@ -149,7 +194,7 @@ class SharedPreferenceService {
   static Future<bool> setDouble(String key, double value) async {
     if (!_isInitialized) await initialize();
     developer.log('Setting double: $key = $value');
-    return await _prefs.setDouble(key, value);
+    return await _prefs!.setDouble(key, value);
   }
 
   // Get a double value
@@ -158,7 +203,7 @@ class SharedPreferenceService {
       developer.log('Warning: Trying to get double value before initialization');
       return null;
     }
-    final value = _prefs.getDouble(key);
+    final value = _prefs!.getDouble(key);
     developer.log('Getting double: $key = $value');
     return value;
   }
@@ -167,7 +212,7 @@ class SharedPreferenceService {
   static Future<bool> setString(String key, String value) async {
     if (!_isInitialized) await initialize();
     developer.log('Setting string: $key = $value');
-    return await _prefs.setString(key, value);
+    return await _prefs!.setString(key, value);
   }
 
   // Get a string value
@@ -176,7 +221,7 @@ class SharedPreferenceService {
       developer.log('Warning: Trying to get string value before initialization');
       return null;
     }
-    final value = _prefs.getString(key);
+    final value = _prefs!.getString(key);
     developer.log('Getting string: $key = $value');
     return value;
   }
@@ -185,7 +230,7 @@ class SharedPreferenceService {
   static Future<bool> setStringList(String key, List<String> value) async {
     if (!_isInitialized) await initialize();
     developer.log('Setting string list: $key = $value');
-    return await _prefs.setStringList(key, value);
+    return await _prefs!.setStringList(key, value);
   }
 
   // Get a string list
@@ -194,7 +239,7 @@ class SharedPreferenceService {
       developer.log('Warning: Trying to get string list before initialization');
       return null;
     }
-    final value = _prefs.getStringList(key);
+    final value = _prefs!.getStringList(key);
     developer.log('Getting string list: $key = $value');
     return value;
   }
@@ -203,15 +248,17 @@ class SharedPreferenceService {
   static Future<bool> remove(String key) async {
     if (!_isInitialized) await initialize();
     developer.log('Removing key: $key');
-    return await _prefs.remove(key);
+    return await _prefs!.remove(key);
   }
 
   // Clear all preferences
   static Future<bool> clear() async {
     if (!_isInitialized) await initialize();
     developer.log('Clearing all preferences');
-    return await _prefs.clear();
+    return await _prefs!.clear();
   }
+
+
 
   // Check if key exists
   static bool containsKey(String key) {
@@ -219,7 +266,7 @@ class SharedPreferenceService {
       developer.log('Warning: Trying to check key before initialization');
       return false;
     }
-    final contains = _prefs.containsKey(key);
+    final contains = _prefs!.containsKey(key);
     developer.log('Checking if contains key: $key = $contains');
     return contains;
   }
@@ -230,9 +277,104 @@ class SharedPreferenceService {
       developer.log('Warning: Trying to get keys before initialization');
       return {};
     }
-    final keys = _prefs.getKeys();
+    final keys = _prefs!.getKeys();
     developer.log('Getting all keys: $keys');
     return keys;
+  }
+
+  // MATH SECTION SPECIFIC METHODS
+
+  // Update Numbers to 10 progress
+  static Future<bool> updateNumbersTo10Progress(int percentage) async {
+    if (!_isInitialized) await initialize();
+    
+    developer.log('Updating Numbers to 10 progress: $percentage%');
+    
+    // Save progress percentage
+    await _prefs!.setInt('numbers_to_10_progress', percentage);
+    
+    // Save completion status if percentage is high enough
+    if (percentage >= 70) {
+      await _prefs!.setBool('numbers_to_10_completed', true);
+    }
+    
+    // Save timestamp of last update
+    await _prefs!.setInt('numbers_to_10_last_update', DateTime.now().millisecondsSinceEpoch);
+    
+    return await commit();
+  }
+
+  // Get Numbers to 10 progress
+  static int getNumbersTo10Progress() {
+    if (!_isInitialized) {
+      developer.log('Warning: Trying to get Numbers to 10 progress before initialization');
+      return 0;
+    }
+    final progress = _prefs!.getInt('numbers_to_10_progress') ?? 0;
+    developer.log('Getting Numbers to 10 progress: $progress%');
+    return progress;
+  }
+
+  // Unlock next math section
+  static Future<bool> unlockNextMathSection(String currentSection) async {
+    if (!_isInitialized) await initialize();
+    
+    developer.log('Unlocking next section after: $currentSection');
+    
+    // Map of section progression
+    final sectionProgression = {
+      'numbers_to_10': 'numbers_to_20',
+      'numbers_to_20': 'addition',
+      'addition': 'subtraction',
+      'subtraction': 'multiplication',
+      'multiplication': 'division',
+      // Add more sections as needed
+    };
+    
+    // Get next section
+    final nextSection = sectionProgression[currentSection];
+    if (nextSection != null) {
+      // Unlock next section
+      await _prefs!.setBool('${nextSection}_unlocked', true);
+      developer.log('Unlocked section: $nextSection');
+      
+      // Save unlock timestamp
+      await _prefs!.setInt('${nextSection}_unlock_time', DateTime.now().millisecondsSinceEpoch);
+      
+      return await commit();
+    }
+    
+    developer.log('No next section found for: $currentSection');
+    return false;
+  }
+
+  // Check if a math section is unlocked
+  static bool isMathSectionUnlocked(String section) {
+    if (!_isInitialized) {
+      developer.log('Warning: Trying to check section unlock status before initialization');
+      return false;
+    }
+    
+    // First section is always unlocked
+    if (section == 'numbers_to_10') return true;
+    
+    final isUnlocked = _prefs!.getBool('${section}_unlocked') ?? false;
+    developer.log('Checking if section $section is unlocked: $isUnlocked');
+    return isUnlocked;
+  }
+
+  // Get last update timestamp for a section
+  static DateTime? getSectionLastUpdate(String section) {
+    if (!_isInitialized) {
+      developer.log('Warning: Trying to get section last update before initialization');
+      return null;
+    }
+    
+    final timestamp = _prefs!.getInt('${section}_last_update');
+    if (timestamp != null) {
+      return DateTime.fromMillisecondsSinceEpoch(timestamp);
+    }
+    return null;
   }
 
   // Commit changes to disk (important for some platforms)
@@ -242,41 +384,92 @@ class SharedPreferenceService {
       return false;
     }
     developer.log('Committing changes to disk');
-    return await _prefs.commit();
+    return await _prefs!.commit();
   }
   
   // Debug: Print all stored values
   static void debugPrintAllValues() {
     if (!_isInitialized) {
-      developer.log('Warning: Trying to print debug values before initialization');
+      developer.log('Warning: Trying to print values before initialization');
       return;
     }
     
-    developer.log('=== DEBUG: All Stored Preference Values ===');
-    final keys = _prefs.getKeys();
-    
-    if (keys.isEmpty) {
-      developer.log('No values stored.');
-    } else {
-      for (final key in keys) {
-        developer.log('$key: ${_prefs.get(key)}');
-      }
+    developer.log('=== Debug Values ===');
+    for (String key in _prefs!.getKeys()) {
+      developer.log('$key: ${_prefs!.get(key)}');
     }
-    
-    // Print all games with completion status
-    final gameIds = getAllGameIds();
-    if (gameIds.isNotEmpty) {
-      developer.log('=== Game Progress Summary ===');
-      for (final gameId in gameIds) {
-        final score = getGameScore(gameId);
-        final total = getTotalQuestions(gameId);
-        final percentage = getGamePercentage(gameId);
-        final completed = isGameCompleted(gameId);
-        
-        developer.log('$gameId: $score/$total (${percentage.toStringAsFixed(1)}%) - ${completed ? "COMPLETED" : "IN PROGRESS"}');
-      }
-    }
-    
     developer.log('=== End of Debug Values ===');
+  }
+
+  static Future<void> resetAllProgress() async {
+    try {
+      if (!_isInitialized) await initialize();
+      developer.log('Resetting all game progress');
+
+      // Reset progress for all chapters
+      for (String chapter in allChapters) {
+        await setGamePercentage(chapter, 0.0);
+        await setGameCompleted(chapter, false);
+      }
+
+      // Reset math play percentage and access
+      await _prefs!.setDouble(_mathPlayKey, 0.0);
+      await _prefs!.setBool('can_access_math_play', false);
+
+      // Clear all game-related data
+      final keys = _prefs!.getKeys();
+      for (String key in keys) {
+        if (key.startsWith('game_') || 
+            key.contains('_score') || 
+            key.contains('_completed') || 
+            key.contains('_total') ||
+            key.contains('_percentage') ||
+            key.contains('_unlocked') ||
+            key.contains('_progress')) {
+          await _prefs!.remove(key);
+        }
+      }
+      
+      developer.log('All progress has been reset successfully');
+    } catch (e) {
+      developer.log('Error resetting progress: $e');
+      rethrow;
+    }
+  }
+
+
+
+  // Update overall progress based on chapter completion
+  static Future<void> _updateOverallProgress() async {
+    if (_prefs == null) return;
+
+    final keys = _prefs!.getKeys();
+    int totalChapters = 0;
+    int completedChapters = 0;
+
+    // Count completed chapters (score >= 50% or marked as completed)
+    for (var key in keys) {
+      if (key.endsWith('_score') && !key.startsWith('math_play')) {
+        totalChapters++;
+        final score = _prefs!.getDouble(key) ?? 0.0;
+        final route = key.replaceAll('_score', '');
+        final completed = _prefs!.getBool('${route}_completed') ?? false;
+        
+        if (score >= 50.0 || completed) {
+          completedChapters++;
+        }
+      }
+    }
+
+    // Calculate and save overall progress
+    if (totalChapters > 0) {
+      final progress = (completedChapters / 15) * 100; // 15 total chapters excluding Math Play
+      await _prefs!.setDouble(_mathPlayKey, progress);
+    }
+  }
+
+  // Get overall progress
+  static double getOverallProgress() {
+    return _prefs?.getDouble(_mathPlayKey) ?? 0.0;
   }
 } 

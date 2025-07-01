@@ -30,9 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
+  flutter_svg: ^2.0.9
   cupertino_icons: ^1.0.2
   provider: ^6.0.5
   shared_preferences: ^2.2.2
@@ -102,28 +100,44 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
   assets:
-    - assets/fonts/
-    - assets/data/
-    - assets/animations/
     - assets/images/
-    - assets/images/kid_math_app_icon.png
+    - assets/images/geometry/
+    - assets/images/statistics/
+    - assets/images/measures/
+    - assets/images/measures/watermelon_apple.svg
+    - assets/images/measures/dumbbell_feather.svg
+    - assets/images/measures/jug_cup.svg
+    - assets/images/measures/bottle_comparison.svg
+    - assets/images/measures/books_pencil.svg
+    - assets/animations/
+    - assets/data/
+    - assets/fonts/
+    - assets/sounds/
+    - assets/images/playstore-icon.png
 
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/kid_math_app_icon.png"
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/kid_math_app_icon.png"
+  image_path: "assets/images/playstore-icon.png"
+  adaptive_icon_background: "#87CEEB"
+  adaptive_icon_foreground: "assets/images/playstore-icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/images/playstore-icon.png"
+    background_color: "#87CEEB"
+    theme_color: "#FFA500"
 
 flutter_native_splash:
-  color: "#FFFFFF"
-  image: assets/images/kid_math_app_icon.png
+  color: "#87CEEB"
+  image: assets/images/playstore-icon.png
   android: true
-  ios: true
+  ios: false
   web: false
   android_12:
-    image: assets/images/kid_math_app_icon.png
-    icon_background_color: "#FFFFFF"
-    image_dark: assets/images/kid_math_app_icon.png
-    icon_background_color_dark: "#FFFFFF"
+    image: assets/images/playstore-icon.png
+    icon_background_color: "#87CEEB"
+    image_dark: assets/images/playstore-icon.png
+    icon_background_color_dark: "#87CEEB"
 

@@ -4,20 +4,9 @@ import 'dart:developer' as developer;
 import '../services/preference_service.dart';
 import '../services/shared_preference_service.dart';
 import 'package:flutter/services.dart';
-
-class MeasureConcept {
-  final String name;
-  final Widget visual;
-  final String description;
-  final List<String> options;
-
-  MeasureConcept({
-    required this.name,
-    required this.visual,
-    required this.description,
-    required this.options,
-  });
-}
+import '../services/game_progress_service.dart';
+import '../main.dart';
+import 'home_screen.dart';
 
 class MeasuresScreen extends StatefulWidget {
   final bool isGameMode;
@@ -43,53 +32,198 @@ class _MeasuresScreenState extends State<MeasuresScreen> with TickerProviderStat
   bool showResult = false;
   bool isCorrect = false;
   String? selectedAnswer;
-  List<MeasureConcept> shuffledConcepts = [];
   bool _isLoading = true;
 
-  final List<MeasureConcept> concepts = [
-    MeasureConcept(
-      name: 'Length',
-      visual: _buildMeasureVisual('📏', 'Length'),
-      description: 'How long or short something is',
-      options: ['Length', 'Weight', 'Time', 'Temperature', 'Volume'],
-    ),
-    MeasureConcept(
-      name: 'Weight',
-      visual: _buildMeasureVisual('⚖️', 'Weight'),
-      description: 'How heavy or light something is',
-      options: ['Weight', 'Length', 'Time', 'Temperature', 'Volume'],
-    ),
-    MeasureConcept(
-      name: 'Time',
-      visual: _buildMeasureVisual('⏰', 'Time'),
-      description: 'How long something takes',
-      options: ['Time', 'Length', 'Weight', 'Temperature', 'Volume'],
-    ),
-    MeasureConcept(
-      name: 'Temperature',
-      visual: _buildMeasureVisual('🌡️', 'Temperature'),
-      description: 'How hot or cold something is',
-      options: ['Temperature', 'Length', 'Weight', 'Time', 'Volume'],
-    ),
-    MeasureConcept(
-      name: 'Volume',
-      visual: _buildMeasureVisual('🧪', 'Volume'),
-      description: 'How much space something takes up',
-      options: ['Volume', 'Length', 'Weight', 'Time', 'Temperature'],
-    ),
-  ];
-
-  static Widget _buildMeasureVisual(String emoji, String measure) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          emoji,
-          style: const TextStyle(fontSize: 48),
-        ),
+  final List<Map<String, dynamic>> games = [
+    {
+      'question': 'Which pencil is longer?',
+      'visual': Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                Container(
+                  width: 200,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: Color(0xFF7B2FF2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text('Pencil A', style: TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+          SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              children: [
+                Container(
+                  width: 120,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: Color(0xFFf357a8),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text('Pencil B', style: TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+        ],
+      ),
+      'options': ['Pencil A', 'Pencil B'],
+      'correctAnswer': 'Pencil A',
+      'explanation': 'Pencil A is longer than Pencil B.',
+    },
+    {
+      'question': 'Which tree is taller?',
+      'visual': Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                Icon(Icons.forest, size: 80, color: Color(0xFF7B2FF2)),
+                Text('Tree A', style: TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+          SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              children: [
+                Icon(Icons.forest, size: 120, color: Color(0xFFf357a8)),
+                Text('Tree B', style: TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+        ],
+      ),
+      'options': ['Tree A', 'Tree B'],
+      'correctAnswer': 'Tree B',
+      'explanation': 'Tree B is taller than Tree A.',
+    },
+    {
+      'question': 'Which door is wider?',
+      'visual': Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 300,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Color(0xFF7B2FF2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Center(child: Text('Door A', style: TextStyle(color: Colors.white))),
+              ),
+            ],
+          ),
+          SizedBox(height: 20),
+          Column(
+            children: [
+              Container(
+                width: 200,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Color(0xFFf357a8),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Center(child: Text('Door B', style: TextStyle(color: Colors.white))),
+              ),
+            ],
+          ),
+        ],
+      ),
+      'options': ['Door A', 'Door B'],
+      'correctAnswer': 'Door A',
+      'explanation': 'Door A is wider than Door B.',
+    },
+    {
+      'question': 'Order these animals from shortest to tallest:',
+      'visual': Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                Icon(Icons.pets, size: 40, color: Colors.brown),
+                Text('Dog', style: TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                Icon(Icons.emoji_nature, size: 100, color: Colors.orange),
+                Text('Giraffe', style: TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                Icon(Icons.emoji_nature, size: 70, color: Colors.grey),
+                Text('Elephant', style: TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+        ],
+      ),
+      'options': [
+        'Dog, Elephant, Giraffe',
+        'Giraffe, Dog, Elephant',
+        'Dog, Giraffe, Elephant',
+        'Elephant, Giraffe, Dog'
       ],
-    );
-  }
+      'correctAnswer': 'Dog, Elephant, Giraffe',
+      'explanation': 'The dog is the shortest, then the elephant, and the giraffe is the tallest.',
+    },
+    {
+      'question': 'Which vehicle is longer?',
+      'visual': Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Icon(Icons.directions_bus, size: 80, color: Color(0xFF7B2FF2)),
+                    Text('Bus', style: TextStyle(fontSize: 14)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Icon(Icons.directions_car, size: 60, color: Color(0xFFf357a8)),
+                    Text('Car', style: TextStyle(fontSize: 14)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      'options': ['Bus', 'Car'],
+      'correctAnswer': 'Bus',
+      'explanation': 'The bus is longer than the car.',
+    },
+  ];
 
   @override
   void initState() {
@@ -158,162 +292,337 @@ class _MeasuresScreenState extends State<MeasuresScreen> with TickerProviderStat
       currentQuestion = 0;
       selectedAnswer = null;
       showResult = false;
-      shuffledConcepts = List.from(concepts)..shuffle();
-      for (var concept in shuffledConcepts) {
-        concept.options.shuffle();
-      }
       _animationController.reset();
       _animationController.forward();
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.isGameMode) {
+      return _buildGameMode();
+    }
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Measures - Length'),
+        backgroundColor: const Color(0xFF7B2FF2),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Understanding Length',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF7B2FF2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Length is all about measuring how long, tall, or wide things are. Let\'s explore different ways to compare lengths!',
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 24),
+                ...games.map((game) => Card(
+                  margin: const EdgeInsets.only(bottom: 24),
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          game['question'],
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF7B2FF2),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: game['visual'],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFf357a8).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.lightbulb_outline,
+                                color: Color(0xFFf357a8),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  game['explanation'],
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFFf357a8),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )).toList(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGameMode() {
+    final game = games[currentQuestion];
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Measures Game'),
+        backgroundColor: const Color(0xFF7B2FF2),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                LinearProgressIndicator(
+                  value: (currentQuestion + 1) / games.length,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7B2FF2)),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Question ${currentQuestion + 1} of ${games.length}',
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                ),
+                SizedBox(height: 24),
+                Text(
+                  game['question'],
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF7B2FF2),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 32),
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: game['visual'],
+                ),
+                SizedBox(height: 32),
+                ...game['options'].map<Widget>((option) {
+                  final bool isSelected = selectedAnswer == option;
+                  final bool showResult = this.showResult;
+                  final bool isCorrect = option == game['correctAnswer'];
+                  
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: AnimatedContainer(
+                      duration: Duration(milliseconds: 300),
+                      child: ElevatedButton(
+                        onPressed: showResult ? null : () => _checkAnswer(option),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: showResult
+                              ? (isCorrect
+                                  ? Colors.green
+                                  : (isSelected ? Colors.red : Colors.grey[300]))
+                              : (isSelected ? Color(0xFF7B2FF2) : Colors.white),
+                          foregroundColor: showResult
+                              ? Colors.white
+                              : (isSelected ? Colors.white : Color(0xFF7B2FF2)),
+                          padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          side: BorderSide(
+                            color: showResult
+                                ? (isCorrect
+                                    ? Colors.green
+                                    : (isSelected ? Colors.red : Colors.grey))
+                                : (isSelected ? Color(0xFF7B2FF2) : Colors.grey),
+                          ),
+                        ),
+                        child: Text(
+                          option,
+                          style: TextStyle(fontSize: 18),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _checkAnswer(String answer) {
     setState(() {
       selectedAnswer = answer;
       showResult = true;
-      isCorrect = answer == shuffledConcepts[currentQuestion].name;
-      // Play answer animation
-      _answerAnimationController.forward().then((_) {
-        _answerAnimationController.reverse();
-      });
+      isCorrect = answer == games[currentQuestion]['correctAnswer'];
       if (isCorrect) {
         score++;
-        _speakText('Yay! You got it right! \\${shuffledConcepts[currentQuestion].name} is correct!');
+        _speakText('Correct!');
       } else {
-        _speakText('Oops! Try again! Think about the measurement');
+        _speakText('Try again!');
       }
     });
-    // Automatically go to next question or show completion dialog
-    Future.delayed(const Duration(milliseconds: 900), () {
-      if (currentQuestion < shuffledConcepts.length - 1) {
-        setState(() {
-          currentQuestion++;
-          selectedAnswer = null;
-          showResult = false;
-          _animationController.reset();
-          _animationController.forward();
-        });
-        _speakText('Next question!');
-      } else {
-        _showCompletionDialog();
+
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        if (currentQuestion < games.length - 1) {
+          setState(() {
+            currentQuestion++;
+            selectedAnswer = null;
+            showResult = false;
+          });
+        } else {
+          // Show completion dialog after the last question
+          _showCompletionDialog();
+        }
       }
     });
   }
 
   void _showCompletionDialog() {
-    final percentage = (score / shuffledConcepts.length) * 100;
-    final isPassed = percentage >= 50.0;
-    SharedPreferenceService.saveGameProgress('measures', score, shuffledConcepts.length);
+    final percentage = (score / games.length) * 100;
+    
+    // Save progress immediately when game is complete
+    SharedPreferenceService.saveGameProgress('measures', score, games.length);
+    
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
+        child: Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header with Icon
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isPassed 
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.orange.withOpacity(0.1),
-                  shape: BoxShape.circle,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.emoji_events,
+                  size: 80,
+                  color: Color(0xFF7B2FF2),
                 ),
-                child: Icon(
-                  isPassed ? Icons.emoji_events : Icons.school,
-                  size: 48,
-                  color: isPassed ? Colors.green : Colors.orange,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Title
-              Text(
-                isPassed ? 'Congratulations!' : 'Keep Practicing!',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: isPassed ? Colors.green : Colors.orange,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Score Display
-              Text(
-                'Score: $score/${shuffledConcepts.length} (${percentage.toStringAsFixed(1)}%)',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Message
-              Text(
-                isPassed
-                  ? 'You\'ve completed the Measures practice!'
-                  : 'You\'re making progress! Keep practicing to improve.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 24),
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                alignment: WrapAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close dialog
-                      Navigator.of(context).pop(); // Return to home screen
-                    },
-                    icon: const Icon(Icons.home),
-                    label: const Text('Go to Home'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                SizedBox(height: 16),
+                Text(
+                  'Game Complete!',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF7B2FF2),
                   ),
-                  if (isPassed)
-                    ElevatedButton.icon(
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Your Score',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '$score/${games.length}',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFf357a8),
+                  ),
+                ),
+                Text(
+                  '${percentage.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: Color(0xFFf357a8),
+                  ),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
                       onPressed: () {
-                        Navigator.of(context).pop(); // Close dialog
-                        _startGame(); // Start new game
+                        Navigator.pop(context);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const HomeScreen(),
+                          ),
+                        );
                       },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Play Again'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.secondary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        backgroundColor: Colors.grey[200],
+                        foregroundColor: Colors.black87,
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
+                      child: Text('Back'),
                     ),
-                ],
-              ),
-            ],
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        setState(() {
+                          score = 0;
+                          currentQuestion = 0;
+                          selectedAnswer = null;
+                          showResult = false;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFFf357a8),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text('Play Again'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -322,238 +631,9 @@ class _MeasuresScreenState extends State<MeasuresScreen> with TickerProviderStat
 
   @override
   void dispose() {
-    flutterTts.stop();
     _animationController.dispose();
     _answerAnimationController.dispose();
+    flutterTts.stop();
     super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Color(0xFF6A1B9A),
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF6A1B9A),
-      systemNavigationBarIconBrightness: Brightness.light,
-    ));
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.isGameMode ? 'Measures Practice' : 'Learn Measures',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        backgroundColor: Color(0xFF7B2FF2),
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
-                ),
-              ),
-              child: widget.isGameMode ? _buildGameContent() : _buildLearningContent(),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGameContent() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Progress bar
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        'Question ${currentQuestion + 1}/${shuffledConcepts.length}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF7B2FF2),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: LinearProgressIndicator(
-                        value: (currentQuestion + 1) / shuffledConcepts.length,
-                        backgroundColor: Colors.grey.withOpacity(0.2),
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF7B2FF2)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              // Question
-              Text(
-                'What is this measure?',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF7B2FF2),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              // Visual
-              Container(
-                height: 100,
-                width: double.infinity,
-                alignment: Alignment.center,
-                child: Center(
-                  child: shuffledConcepts[currentQuestion].visual,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Answer options
-              ...shuffledConcepts[currentQuestion].options.map((option) {
-                final isSelected = selectedAnswer == option;
-                final isCorrectOption = showResult && option == shuffledConcepts[currentQuestion].name;
-                final isIncorrect = showResult && isSelected && !isCorrect;
-                Color backgroundColor;
-                if (isCorrectOption) {
-                  backgroundColor = Colors.green.withOpacity(0.9);
-                } else if (isIncorrect) {
-                  backgroundColor = Colors.red.withOpacity(0.9);
-                } else if (isSelected) {
-                  backgroundColor = const Color(0xFF7B2FF2).withOpacity(0.9);
-                } else {
-                  backgroundColor = const Color(0xFF7B2FF2).withOpacity(0.7);
-                }
-                return ScaleTransition(
-                  scale: (isSelected && showResult) ? _answerScaleAnimation : const AlwaysStoppedAnimation(1.0),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: backgroundColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Material(
-                      borderRadius: BorderRadius.circular(12),
-                      elevation: isSelected ? 4 : 1,
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: showResult ? null : () => _checkAnswer(option),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  option,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              if (isCorrectOption)
-                                const Icon(Icons.check_circle, color: Colors.white, size: 24)
-                              else if (isIncorrect)
-                                const Icon(Icons.cancel, color: Colors.white, size: 24),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLearningContent() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-          child: Text(
-            'Learn Measures',
-            style: const TextStyle(
-              fontSize: 24,
-              color: Color(0xFF7B2FF2),
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: concepts.map((concept) {
-                  return Card(
-                    color: Colors.white,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            concept.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF7B2FF2),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Center(child: concept.visual),
-                          const SizedBox(height: 12),
-                          Text(
-                            concept.description,
-                            style: const TextStyle(fontSize: 16, color: Color(0xFF7B2FF2)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
   }
 } 

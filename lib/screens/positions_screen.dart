@@ -51,49 +51,49 @@ final List<PositionConcept> concepts = [
 
 final List<PositionGameQuestion> positionGameQuestions = [
   PositionGameQuestion(
-    question: 'Where is the red circle positioned?',
+    question: 'Where is the ball positioned?',
     correctAnswer: 'Above',
     options: ['Above', 'Below', 'Left', 'Right'],
-    visual: _buildPositionVisual('above'),
+    visual: _buildPositionVisual('above', '⚽'),
   ),
   PositionGameQuestion(
-    question: 'Where is the red circle positioned?',
+    question: 'Where is the star positioned?',
     correctAnswer: 'Below',
     options: ['Above', 'Below', 'Left', 'Right'],
-    visual: _buildPositionVisual('below'),
+    visual: _buildPositionVisual('below', '⭐'),
   ),
   PositionGameQuestion(
-    question: 'Where is the red circle positioned?',
+    question: 'Where is the heart positioned?',
     correctAnswer: 'Left',
     options: ['Left', 'Right', 'Above', 'Below'],
-    visual: _buildPositionVisual('left'),
+    visual: _buildPositionVisual('left', '❤️'),
   ),
   PositionGameQuestion(
-    question: 'Where is the red circle positioned?',
+    question: 'Where is the flower positioned?',
     correctAnswer: 'Right',
     options: ['Left', 'Right', 'Above', 'Below'],
-    visual: _buildPositionVisual('right'),
+    visual: _buildPositionVisual('right', '🌸'),
   ),
   PositionGameQuestion(
-    question: 'Where is the red circle positioned?',
+    question: 'Where is the sun positioned?',
     correctAnswer: 'Inside',
     options: ['Inside', 'Outside', 'Above', 'Below'],
-    visual: _buildPositionVisual('inside'),
+    visual: _buildPositionVisual('inside', '☀️'),
   ),
   PositionGameQuestion(
-    question: 'Where is the red circle positioned?',
+    question: 'Where is the moon positioned?',
     correctAnswer: 'Outside',
     options: ['Inside', 'Outside', 'Above', 'Below'],
-    visual: _buildPositionVisual('outside'),
+    visual: _buildPositionVisual('outside', '🌙'),
   ),
 ];
 
-Widget _buildPositionVisual(String position) {
+Widget _buildPositionVisual(String position, String emoji) {
   return Container(
     width: 150,
     height: 150,
     child: CustomPaint(
-      painter: PositionPainter(position),
+      painter: PositionPainter(position, emoji),
       size: const Size(150, 150),
     ),
   );
@@ -331,10 +331,10 @@ class _PositionsScreenState extends State<PositionsScreen> with TickerProviderSt
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop(); // Close dialog
-                      Navigator.of(context).pop(); // Return to home screen
+                      Navigator.of(context).pop(); // Return to chapter screen
                     },
-                    icon: const Icon(Icons.home),
-                    label: const Text('Go to Home'),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Back'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
@@ -379,34 +379,107 @@ class _PositionsScreenState extends State<PositionsScreen> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Color(0xFF6A1B9A),
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Color(0xFF6A1B9A),
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
-    );
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF6A1B9A),
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF6A1B9A),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
+
+    if (widget.isGameMode) {
+      return _buildGameModeScreen();
+    }
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6A1B9A),
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          widget.isGameMode ? 'Positions Game' : 'Learn Positions',
-          style: const TextStyle(
+        title: const Text('Learn Positions'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: concepts.length,
+        itemBuilder: (context, index) {
+          final concept = concepts[index];
+          return Card(
+            elevation: 4,
+            margin: const EdgeInsets.only(bottom: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: InkWell(
+              onTap: () => _speakText('${concept.name}. ${concept.description}'),
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          concept.icon,
+                          color: const Color(0xFF6A1B9A),
+                          size: 32,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            concept.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF6A1B9A),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Center(child: _buildConceptVisual(concept.name)),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Description:',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      concept.description,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildGameModeScreen() {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Position Practice',
+          style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
+        backgroundColor: Color(0xFF6A1B9A),
+        elevation: 0,
+        centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Color(0xFF6A1B9A),
           statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
           systemNavigationBarColor: Color(0xFF6A1B9A),
           systemNavigationBarIconBrightness: Brightness.light,
         ),
@@ -420,7 +493,7 @@ class _PositionsScreenState extends State<PositionsScreen> with TickerProviderSt
           ),
         ),
         child: SafeArea(
-          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
+          child: _buildGameMode(),
         ),
       ),
     );
@@ -561,127 +634,187 @@ class _PositionsScreenState extends State<PositionsScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildLearningMode() {
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-          child: Text(
-            'Learn Positions',
-            style: TextStyle(
-              fontSize: 24,
-              color: Color(0xFF6A1B9A),
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: concepts.map((concept) {
-                  return Card(
-                    color: Colors.white,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Icon(
-                              concept.icon,
-                              color: const Color(0xFF6A1B9A),
-                              size: 48,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            concept.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF6A1B9A),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            concept.description,
-                            style: const TextStyle(fontSize: 16, color: Color(0xFF6A1B9A)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
+  Widget _buildConceptVisual(String name) {
+    switch (name.toLowerCase()) {
+      case 'above and below':
+        return Column(
+          children: [
+            _buildPositionVisual('above', '⚽'),
+            const SizedBox(height: 10),
+            _buildPositionVisual('below', '⭐'),
+          ],
+        );
+      case 'left and right':
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildPositionVisual('left', '❤️'),
+            const SizedBox(width: 10),
+            _buildPositionVisual('right', '🌸'),
+          ],
+        );
+      case 'in front and behind':
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Center(
+                child: Text(
+                  'Behind',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-          ),
-        ),
-      ],
-    );
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: const Color(0xFF6A1B9A),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Center(
+                child: Text(
+                  'Front',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      case 'inside and outside':
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildPositionVisual('inside', '☀️'),
+            const SizedBox(width: 10),
+            _buildPositionVisual('outside', '🌙'),
+          ],
+        );
+      default:
+        return _buildPositionVisual('above', '⚽');
+    }
   }
 }
 
 class PositionPainter extends CustomPainter {
   final String position;
+  final String emoji;
 
-  PositionPainter(this.position);
+  PositionPainter(this.position, this.emoji);
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..style = PaintingStyle.fill;
+      ..color = Colors.grey[300]!
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
 
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width * 0.1;
-
-    // Draw blue square as reference
-    paint.color = Colors.blue;
-    final squareSize = size.width * 0.3;
-    final squareRect = Rect.fromCenter(
-      center: center,
-      width: squareSize,
-      height: squareSize,
+    final referenceRect = Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2),
+      width: 60,
+      height: 60,
     );
-    canvas.drawRect(squareRect, paint);
 
-    // Draw red circle in different positions
-    paint.color = Colors.red;
-    Offset circleCenter;
+    // Draw reference square
+    canvas.drawRect(referenceRect, paint);
+
+    // Draw emoji based on position
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: emoji,
+        style: const TextStyle(
+          fontSize: 24,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+
+    final emojiWidth = textPainter.width;
+    final emojiHeight = textPainter.height;
 
     switch (position) {
       case 'above':
-        circleCenter = Offset(center.dx, center.dy - squareSize * 0.8);
+        textPainter.paint(
+          canvas,
+          Offset(
+            (size.width - emojiWidth) / 2,
+            referenceRect.top - emojiHeight - 10,
+          ),
+        );
         break;
       case 'below':
-        circleCenter = Offset(center.dx, center.dy + squareSize * 0.8);
+        textPainter.paint(
+          canvas,
+          Offset(
+            (size.width - emojiWidth) / 2,
+            referenceRect.bottom + 10,
+          ),
+        );
         break;
       case 'left':
-        circleCenter = Offset(center.dx - squareSize * 0.8, center.dy);
+        textPainter.paint(
+          canvas,
+          Offset(
+            referenceRect.left - emojiWidth - 10,
+            (size.height - emojiHeight) / 2,
+          ),
+        );
         break;
       case 'right':
-        circleCenter = Offset(center.dx + squareSize * 0.8, center.dy);
+        textPainter.paint(
+          canvas,
+          Offset(
+            referenceRect.right + 10,
+            (size.height - emojiHeight) / 2,
+          ),
+        );
         break;
       case 'inside':
-        circleCenter = center;
+        textPainter.paint(
+          canvas,
+          Offset(
+            (size.width - emojiWidth) / 2,
+            (size.height - emojiHeight) / 2,
+          ),
+        );
         break;
       case 'outside':
-        circleCenter = Offset(center.dx + squareSize * 1.2, center.dy + squareSize * 1.2);
+        // Draw emoji in all four corners
+        final cornerOffset = 10.0;
+        textPainter.paint(
+          canvas,
+          Offset(cornerOffset, cornerOffset),
+        );
+        textPainter.paint(
+          canvas,
+          Offset(size.width - emojiWidth - cornerOffset, cornerOffset),
+        );
+        textPainter.paint(
+          canvas,
+          Offset(cornerOffset, size.height - emojiHeight - cornerOffset),
+        );
+        textPainter.paint(
+          canvas,
+          Offset(
+            size.width - emojiWidth - cornerOffset,
+            size.height - emojiHeight - cornerOffset,
+          ),
+        );
         break;
-      default:
-        circleCenter = center;
     }
-
-    canvas.drawCircle(circleCenter, radius, paint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 } 

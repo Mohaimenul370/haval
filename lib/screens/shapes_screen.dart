@@ -7,12 +7,12 @@ import '../widgets/menu_card.dart';
 import 'dart:math';
 import 'package:flutter/services.dart';
 
-class ShapeQuestion {
+class Question {
   final String shape;
   final List<String> options;
   final String correctAnswer;
 
-  ShapeQuestion({
+  Question({
     required this.shape,
     required this.options,
     required this.correctAnswer,
@@ -55,7 +55,7 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
   String? selectedAnswer;
   bool showResult = false;
   bool isCorrect = false;
-  List<ShapeQuestion> questions = [];
+  List<Question> questions = [];
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
 
@@ -139,30 +139,30 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
       selectedAnswer = null;
       showResult = false;
       
-      // Create a list of shape questions
+      // Create a list of shape questions with consistent casing
       questions = [
-        ShapeQuestion(
-          shape: 'Circle',
+        Question(
+          shape: 'circle',
           options: ['Circle', 'Square', 'Triangle', 'Rectangle'],
           correctAnswer: 'Circle',
         ),
-        ShapeQuestion(
-          shape: 'Square',
+        Question(
+          shape: 'square',
           options: ['Circle', 'Square', 'Triangle', 'Rectangle'],
           correctAnswer: 'Square',
         ),
-        ShapeQuestion(
-          shape: 'Triangle',
+        Question(
+          shape: 'triangle',
           options: ['Circle', 'Square', 'Triangle', 'Rectangle'],
           correctAnswer: 'Triangle',
         ),
-        ShapeQuestion(
-          shape: 'Pentagon',
+        Question(
+          shape: 'pentagon',
           options: ['Pentagon', 'Hexagon', 'Octagon', 'Star'],
           correctAnswer: 'Pentagon',
         ),
-        ShapeQuestion(
-          shape: 'Hexagon',
+        Question(
+          shape: 'hexagon',
           options: ['Pentagon', 'Hexagon', 'Octagon', 'Star'],
           correctAnswer: 'Hexagon',
         ),
@@ -315,7 +315,7 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
               const SizedBox(height: 24),
               Text(
                 isPassed
-                    ? 'Great job! You\'ve mastered the shapes!'
+                    ? 'Great job! You\'ve mastered these shapes!'
                     : 'You\'re getting there! Practice makes perfect.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -325,18 +325,16 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
                 ),
               ),
               const SizedBox(height: 24),
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                alignment: WrapAlignment.center,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop();
                       Navigator.of(context).pop();
                     },
-                    icon: const Icon(Icons.home),
-                    label: const Text('Go to Home'),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Back'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
@@ -346,23 +344,22 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
                       ),
                     ),
                   ),
-                  if (isPassed)
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _startGame();
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Play Again'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.secondary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _startGame();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Play Again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                  ),
                 ],
               ),
             ],
@@ -374,367 +371,312 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
-        statusBarColor: Color(0xFF7B2FF2),
-        systemNavigationBarColor: Color(0xFF7B2FF2),
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
-      child: Scaffold(
-        backgroundColor: Color(0xFFF3EFFF),
-        appBar: AppBar(
-          title: Text(
-            widget.isGameMode ? 'Shapes Practice' : 'Learn Shapes',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF6A1B9A),
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF6A1B9A),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F5F2),
+      appBar: AppBar(
+        title: Text(
+          widget.isGameMode ? 'Shapes Practice' : 'Learn Shapes',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
           ),
-          backgroundColor: Color(0xFF7B2FF2),
-          elevation: 0,
-          centerTitle: true,
-          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
-            ),
+        backgroundColor: Color(0xFF7B2FF2),
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
           ),
-          child: SafeArea(
-            child: widget.isGameMode ? _buildGameContent() : _buildLearningContent(),
-          ),
+        ),
+        child: SafeArea(
+          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
         ),
       ),
     );
   }
 
-  Widget _buildGameContent() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                      Theme.of(context).colorScheme.primary.withOpacity(0.9),
-                    ],
-                  ),
-                ),
+  Widget _buildLearningMode() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: activities.length,
+      itemBuilder: (context, index) {
+        final activity = activities[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
                 padding: const EdgeInsets.all(16),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(
-                      child: Text(
-                        'Question ${currentQuestion + 1}/${questions.length}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      activity.title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: (currentQuestion + 1) / questions.length,
-                          backgroundColor: Colors.white.withOpacity(0.2),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                          minHeight: 8,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        'Score: $score',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                    const SizedBox(height: 8),
+                    Text(
+                      activity.description,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Container(
+              Container(
                 height: 200,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Color(0xFF7B2FF2), width: 2),
-                ),
-                padding: const EdgeInsets.all(16),
-                alignment: Alignment.center,
-                child: _buildShapeVisual(questions[currentQuestion]),
-              ),
-            ),
-            const SizedBox(height: 24),
-            ...questions[currentQuestion].options.map((option) {
-              final isSelected = selectedAnswer == option;
-              final isCorrect = showResult && option == questions[currentQuestion].correctAnswer;
-              final isIncorrect = showResult && isSelected && option != questions[currentQuestion].correctAnswer;
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: AnimatedBuilder(
-                  animation: _animationController,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: isSelected ? _scaleAnimation.value : 1.0,
-                      child: Material(
-                        borderRadius: BorderRadius.circular(12),
-                        elevation: isSelected ? 4 : 1,
-                        child: InkWell(
-                          onTap: showResult ? null : () => _checkAnswer(option),
-                          borderRadius: BorderRadius.circular(12),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                            decoration: BoxDecoration(
-                              color: _getOptionColor(isSelected, isCorrect, isIncorrect),
-                              borderRadius: BorderRadius.circular(12),
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  _getOptionColor(isSelected, isCorrect, isIncorrect),
-                                  _getOptionColor(isSelected, isCorrect, isIncorrect).withOpacity(0.8),
-                                ],
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    option,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 2,
-                                  ),
-                                ),
-                                if (isCorrect)
-                                  const Icon(Icons.check_circle, color: Colors.white, size: 24)
-                                else if (isIncorrect)
-                                  const Icon(Icons.cancel, color: Colors.white, size: 24),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              );
-            }).toList(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLearningContent() {
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: activities.length,
-            itemBuilder: (context, index) {
-              final activity = activities[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: InkWell(
-                  onTap: () => _handleActivityTap(activity, index),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                'Lesson ${index + 1}',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                activity.title,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          activity.description,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        activity.visual,
-                        const SizedBox(height: 16),
-                        Text(
-                          activity.instruction,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                child: RawScrollbar(
+                  thumbColor: Theme.of(context).primaryColor.withOpacity(0.6),
+                  radius: const Radius.circular(20),
+                  thickness: 5,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: activity.visual,
                     ),
                   ),
                 ),
-              );
-            },
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activity.instruction,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGameMode() {
+    return Column(
+      children: [
+        // Question number indicator
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Text(
+            'Question ${currentQuestion + 1} of ${questions.length}',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        // Game content
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // Question visual
+              Container(
+                height: 200,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 5,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: _buildShapeVisual(questions[currentQuestion]),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Question text
+              Text(
+                'What shape is this?',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              // Options grid
+              GridView.count(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                childAspectRatio: 2.5,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                children: questions[currentQuestion]
+                    .options
+                    .map((option) => _buildAnswerOption(option))
+                    .toList(),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  void _handleActivityTap(ShapeActivity activity, int index) {
-    _speakText('${activity.title}. ${activity.instruction}');
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(activity.title),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              activity.visual,
-              const SizedBox(height: 16),
-              Text(activity.instruction),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: activity.options.map((option) => ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _speakText('You selected $option. Let\'s practice more!');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                    foregroundColor: Theme.of(context).colorScheme.primary,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+  Widget _buildAnswerOption(String option) {
+    final isSelected = selectedAnswer == option;
+    final isCorrect = showResult && option == questions[currentQuestion].correctAnswer;
+    final isIncorrect = showResult && isSelected && option != questions[currentQuestion].correctAnswer;
+
+    Color backgroundColor;
+    if (isCorrect) {
+      backgroundColor = Colors.green.shade100;
+    } else if (isIncorrect) {
+      backgroundColor = Colors.red.shade100;
+    } else if (isSelected) {
+      backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.2);
+    } else {
+      backgroundColor = Colors.white;
+    }
+
+    Color borderColor;
+    if (isCorrect) {
+      borderColor = Colors.green;
+    } else if (isIncorrect) {
+      borderColor = Colors.red;
+    } else if (isSelected) {
+      borderColor = Theme.of(context).colorScheme.primary;
+    } else {
+      borderColor = Colors.grey.shade300;
+    }
+
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: isSelected ? _scaleAnimation.value : 1.0,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: showResult ? null : () => _checkAnswer(option),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: borderColor,
+                    width: 2,
                   ),
-                  child: Text(option),
-                )).toList(),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        option,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    if (isCorrect)
+                      const Icon(Icons.check_circle, color: Colors.green, size: 20)
+                    else if (isIncorrect)
+                      const Icon(Icons.cancel, color: Colors.red, size: 20),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildShapeVisual(ShapeQuestion question) {
-    return Container(
-      width: 200,
-      height: 200,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: _buildShapeIcon(question.shape),
-      ),
-    );
-  }
-
-  Widget _buildShapeIcon(String shape) {
-    switch (shape.toLowerCase()) {
+  Widget _buildShapeVisual(Question question) {
+    switch (question.shape.toLowerCase()) {
       case 'circle':
-        return const Icon(Icons.circle, size: 100, color: Colors.blue);
+        return Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        );
       case 'square':
-        return const Icon(Icons.square, size: 100, color: Colors.red);
-      case 'triangle':
-        return const Icon(Icons.change_history, size: 100, color: Colors.green);
+        return Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
       case 'rectangle':
-        return const Icon(Icons.rectangle, size: 100, color: Colors.orange);
+        return Container(
+          width: 160,
+          height: 100,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
+      case 'triangle':
+        return CustomPaint(
+          size: const Size(120, 120),
+          painter: TrianglePainter(color: Theme.of(context).colorScheme.primary),
+        );
       case 'pentagon':
-        return const Icon(Icons.pentagon, size: 100, color: Colors.purple);
+        return CustomPaint(
+          size: const Size(120, 120),
+          painter: PentagonPainter(color: Theme.of(context).colorScheme.primary),
+        );
       case 'hexagon':
-        return const Icon(Icons.hexagon, size: 100, color: Colors.teal);
+        return CustomPaint(
+          size: const Size(120, 120),
+          painter: HexagonPainter(color: Theme.of(context).colorScheme.primary),
+        );
       default:
-        return const Icon(Icons.shape_line, size: 100, color: Colors.grey);
+        return Text(
+          question.shape,
+          style: const TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+          ),
+        );
     }
   }
 
@@ -744,13 +686,13 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildShapeIcon('Circle'),
+          _buildShapeCard('Circle', _buildShapeVisual(Question(shape: 'Circle', options: [], correctAnswer: ''))),
           const SizedBox(width: 16),
-          _buildShapeIcon('Square'),
+          _buildShapeCard('Square', _buildShapeVisual(Question(shape: 'Square', options: [], correctAnswer: ''))),
           const SizedBox(width: 16),
-          _buildShapeIcon('Triangle'),
+          _buildShapeCard('Triangle', _buildShapeVisual(Question(shape: 'Triangle', options: [], correctAnswer: ''))),
           const SizedBox(width: 16),
-          _buildShapeIcon('Rectangle'),
+          _buildShapeCard('Rectangle', _buildShapeVisual(Question(shape: 'Rectangle', options: [], correctAnswer: ''))),
         ],
       ),
     );
@@ -762,9 +704,9 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildShapeIcon('Pentagon'),
+          _buildShapeCard('Pentagon', _buildShapeVisual(Question(shape: 'Pentagon', options: [], correctAnswer: ''))),
           const SizedBox(width: 16),
-          _buildShapeIcon('Hexagon'),
+          _buildShapeCard('Hexagon', _buildShapeVisual(Question(shape: 'Hexagon', options: [], correctAnswer: ''))),
           const SizedBox(width: 16),
           const Icon(Icons.star, size: 100, color: Colors.amber),
         ],
@@ -778,27 +720,10 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
       runSpacing: 16,
       alignment: WrapAlignment.center,
       children: [
-        _buildShapeWithProperties('Triangle', '3 sides'),
-        _buildShapeWithProperties('Square', '4 sides'),
-        _buildShapeWithProperties('Pentagon', '5 sides'),
-        _buildShapeWithProperties('Hexagon', '6 sides'),
-      ],
-    );
-  }
-
-  Widget _buildShapeWithProperties(String shape, String properties) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildShapeIcon(shape),
-        const SizedBox(height: 8),
-        Text(
-          properties,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.primary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        _buildShapeCard('Triangle', _buildShapeVisual(Question(shape: 'Triangle', options: [], correctAnswer: ''))),
+        _buildShapeCard('Square', _buildShapeVisual(Question(shape: 'Square', options: [], correctAnswer: ''))),
+        _buildShapeCard('Pentagon', _buildShapeVisual(Question(shape: 'Pentagon', options: [], correctAnswer: ''))),
+        _buildShapeCard('Hexagon', _buildShapeVisual(Question(shape: 'Hexagon', options: [], correctAnswer: ''))),
       ],
     );
   }
@@ -809,13 +734,13 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildShapeIcon('Circle'),
+          _buildShapeCard('Circle', _buildShapeVisual(Question(shape: 'Circle', options: [], correctAnswer: ''))),
           const Icon(Icons.arrow_forward, size: 40, color: Colors.grey),
-          _buildShapeIcon('Square'),
+          _buildShapeCard('Square', _buildShapeVisual(Question(shape: 'Square', options: [], correctAnswer: ''))),
           const Icon(Icons.arrow_forward, size: 40, color: Colors.grey),
-          _buildShapeIcon('Triangle'),
+          _buildShapeCard('Triangle', _buildShapeVisual(Question(shape: 'Triangle', options: [], correctAnswer: ''))),
           const Icon(Icons.arrow_forward, size: 40, color: Colors.grey),
-          _buildShapeIcon('Circle'),
+          _buildShapeCard('Circle', _buildShapeVisual(Question(shape: 'Circle', options: [], correctAnswer: ''))),
         ],
       ),
     );
@@ -852,16 +777,49 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
     );
   }
 
-  Color _getOptionColor(bool isSelected, bool isCorrect, bool isIncorrect) {
-    if (isCorrect) {
-      return Colors.green.withOpacity(0.9);
-    } else if (isIncorrect) {
-      return Colors.red.withOpacity(0.9);
-    } else if (isSelected) {
-      return Theme.of(context).colorScheme.primary.withOpacity(0.9);
-    } else {
-      return Theme.of(context).colorScheme.primary.withOpacity(0.7);
-    }
+  Widget _buildShapeCard(String shapeName, Widget shapeVisual) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        width: 160,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 120,
+              width: 120,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: shapeVisual,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              shapeName,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -870,4 +828,269 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
     flutterTts.stop();
     super.dispose();
   }
+
+  Widget _buildLessonMode() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildLessonSection(
+          'Basic Shapes',
+          [
+            _buildShapeCard('Circle', _buildShapeVisual(Question(shape: 'circle', options: [], correctAnswer: ''))),
+            _buildShapeCard('Square', _buildShapeVisual(Question(shape: 'square', options: [], correctAnswer: ''))),
+            _buildShapeCard('Triangle', _buildShapeVisual(Question(shape: 'triangle', options: [], correctAnswer: ''))),
+            _buildShapeCard('Rectangle', _buildShapeVisual(Question(shape: 'rectangle', options: [], correctAnswer: ''))),
+          ],
+        ),
+        const SizedBox(height: 24),
+        _buildLessonSection(
+          'Advanced Shapes',
+          [
+            _buildShapeCard('Pentagon', _buildShapeVisual(Question(shape: 'pentagon', options: [], correctAnswer: ''))),
+            _buildShapeCard('Hexagon', _buildShapeVisual(Question(shape: 'hexagon', options: [], correctAnswer: ''))),
+          ],
+        ),
+        const SizedBox(height: 24),
+        _buildShapeProperties(),
+        const SizedBox(height: 24),
+        _buildShapePatterns(),
+      ],
+    );
+  }
+
+  Widget _buildLessonSection(String title, List<Widget> shapes) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: shapes.map((shape) => Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: shape,
+            )).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildShapeProperties() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Shape Properties',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            _buildPropertyCard('Triangle', '3 sides', Question(shape: 'triangle', options: [], correctAnswer: '')),
+            _buildPropertyCard('Square', '4 equal sides', Question(shape: 'square', options: [], correctAnswer: '')),
+            _buildPropertyCard('Pentagon', '5 sides', Question(shape: 'pentagon', options: [], correctAnswer: '')),
+            _buildPropertyCard('Hexagon', '6 sides', Question(shape: 'hexagon', options: [], correctAnswer: '')),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPropertyCard(String shapeName, String property, Question question) {
+    return Container(
+      width: 160,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            height: 120,
+            width: 120,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Center(
+              child: _buildShapeVisual(question),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            shapeName,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            property,
+            style: TextStyle(
+              fontSize: 16,
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShapePatterns() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Shape Patterns',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildShapeVisual(Question(shape: 'circle', options: [], correctAnswer: '')),
+              const Icon(Icons.arrow_forward, size: 40, color: Colors.grey),
+              _buildShapeVisual(Question(shape: 'square', options: [], correctAnswer: '')),
+              const Icon(Icons.arrow_forward, size: 40, color: Colors.grey),
+              _buildShapeVisual(Question(shape: 'triangle', options: [], correctAnswer: '')),
+              const Icon(Icons.arrow_forward, size: 40, color: Colors.grey),
+              _buildShapeVisual(Question(shape: 'circle', options: [], correctAnswer: '')),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class TrianglePainter extends CustomPainter {
+  final Color color;
+
+  TrianglePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    path.moveTo(size.width / 2, 0);
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(TrianglePainter oldDelegate) => color != oldDelegate.color;
+}
+
+class PentagonPainter extends CustomPainter {
+  final Color color;
+
+  PentagonPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final centerX = size.width / 2;
+    final centerY = size.height / 2;
+    final radius = size.width / 2;
+
+    // Start at the top point
+    path.moveTo(centerX, 0);
+
+    // Calculate the points of the pentagon
+    for (int i = 1; i <= 5; i++) {
+      final angle = (i * 2 * pi / 5) - (pi / 2); // Start from the top
+      final x = centerX + radius * cos(angle);
+      final y = centerY + radius * sin(angle);
+      path.lineTo(x, y);
+    }
+
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(PentagonPainter oldDelegate) => color != oldDelegate.color;
+}
+
+class HexagonPainter extends CustomPainter {
+  final Color color;
+
+  HexagonPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final centerX = size.width / 2;
+    final centerY = size.height / 2;
+    final radius = size.width / 2;
+
+    // Start at the rightmost point
+    path.moveTo(centerX + radius, centerY);
+
+    // Calculate the points of the hexagon
+    for (int i = 1; i <= 6; i++) {
+      final angle = (i * 2 * pi / 6);
+      final x = centerX + radius * cos(angle);
+      final y = centerY + radius * sin(angle);
+      path.lineTo(x, y);
+    }
+
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(HexagonPainter oldDelegate) => color != oldDelegate.color;
 } 

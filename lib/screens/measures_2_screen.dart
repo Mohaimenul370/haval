@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:developer' as developer;
 import '../services/preference_service.dart';
 import '../services/shared_preference_service.dart';
@@ -13,6 +14,7 @@ class Measure {
   final String example;
   final String unit;
   final List<String> options;
+  final String section;
 
   Measure({
     required this.name,
@@ -21,6 +23,7 @@ class Measure {
     required this.example,
     required this.unit,
     required this.options,
+    required this.section,
   });
 }
 
@@ -34,240 +37,97 @@ class Measures2Screen extends StatefulWidget {
 
 class _Measures2ScreenState extends State<Measures2Screen> with TickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
-  late bool isGameMode;
-  int score = 0;
+  bool isGameMode = false;
+  bool _isLoading = false;
+  bool _isAnswering = false;
   int currentQuestion = 0;
-  String? selectedAnswer;
+  int score = 0;
+  String selectedAnswer = '';
   bool showResult = false;
   bool isCorrect = false;
-  List<Measure> shuffledMeasures = [];
-  late AnimationController _animationController;
-  late Animation<double> _animation;
+  List<Map<String, dynamic>> practiceQuestions = [];
+  late AnimationController _controller;
   late AnimationController _answerAnimationController;
+  late Animation<double> _animation;
   late Animation<double> _answerScaleAnimation;
-  List<String> _currentOptions = [];
-  Map<String, String?> _answerStatus = {};
-
-  final List<Measure> measures = [
-    Measure(
-      name: 'Longer/Shorter',
-      description: 'Comparing lengths of objects',
-      visual: _buildLengthComparisonVisual(),
-      example: 'A pencil is shorter than a ruler',
-      unit: 'cm',
-      options: [
-        'A pencil is shorter than a ruler',
-        'A ruler is shorter than a pencil',
-        'Both are the same length',
-        'Cannot compare lengths',
-      ],
-    ),
-    Measure(
-      name: 'Taller/Shorter',
-      description: 'Comparing heights of objects',
-      visual: _buildHeightComparisonVisual(),
-      example: 'A tree is taller than a flower',
-      unit: 'cm',
-      options: [
-        'A tree is taller than a flower',
-        'A flower is taller than a tree',
-        'Both are the same height',
-        'Cannot compare heights',
-      ],
-    ),
-    Measure(
-      name: 'Heavier/Lighter',
-      description: 'Comparing weights of objects',
-      visual: _buildWeightComparisonVisual(),
-      example: 'A book is heavier than a feather',
-      unit: 'kg',
-      options: [
-        'A book is heavier than a feather',
-        'A feather is heavier than a book',
-        'Both weigh the same',
-        'Cannot compare weights',
-      ],
-    ),
-    Measure(
-      name: 'More/Less',
-      description: 'Comparing amounts of liquid',
-      visual: _buildCapacityComparisonVisual(),
-      example: 'A jug has more water than a cup',
-      unit: 'ml',
-      options: [
-        'A jug has more water than a cup',
-        'A cup has more water than a jug',
-        'Both have the same amount',
-        'Cannot compare amounts',
-      ],
-    ),
-    Measure(
-      name: 'Longer/Shorter Time',
-      description: 'Comparing durations',
-      visual: _buildTimeComparisonVisual(),
-      example: 'An hour is longer than a minute',
-      unit: 'min',
-      options: [
-        'An hour is longer than a minute',
-        'A minute is longer than an hour',
-        'Both are the same duration',
-        'Cannot compare durations',
-      ],
-    ),
-  ];
-
-  static Widget _buildLengthComparisonVisual() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 100,
-          height: 20,
-          color: Colors.blue,
-        ),
-        const SizedBox(width: 20),
-        Container(
-          width: 50,
-          height: 20,
-          color: Colors.red,
-        ),
-      ],
-    );
-  }
-
-  static Widget _buildHeightComparisonVisual() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 20,
-          height: 100,
-          color: Colors.green,
-        ),
-        const SizedBox(height: 20),
-        Container(
-          width: 20,
-          height: 50,
-          color: Colors.orange,
-        ),
-      ],
-    );
-  }
-
-  static Widget _buildWeightComparisonVisual() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Icon(Icons.book, size: 40, color: Colors.brown),
-            const Text('Heavy'),
-          ],
-        ),
-        const SizedBox(width: 20),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Icon(Icons.air, size: 40, color: Colors.grey),
-            const Text('Light'),
-          ],
-        ),
-      ],
-    );
-  }
-
-  static Widget _buildCapacityComparisonVisual() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 40,
-          height: 80,
-          decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.3),
-            border: Border.all(color: Colors.blue),
-          ),
-        ),
-        const SizedBox(width: 20),
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.3),
-            border: Border.all(color: Colors.blue),
-          ),
-        ),
-      ],
-    );
-  }
-
-  static Widget _buildTimeComparisonVisual() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Icon(Icons.timer, size: 40, color: Colors.purple),
-            const Text('Longer'),
-          ],
-        ),
-        const SizedBox(width: 20),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Icon(Icons.timer_3, size: 40, color: Colors.purple),
-            const Text('Shorter'),
-          ],
-        ),
-      ],
-    );
-  }
 
   @override
   void initState() {
     super.initState();
-    _initializeTts();
     isGameMode = widget.isGameMode;
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+    _initializeTts();
+    _initializeQuestions();
+    
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
+    
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
     );
+
     _answerAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _answerScaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(
-        parent: _answerAnimationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    // Initialize shuffledMeasures and options if starting in game mode
-    if (isGameMode) {
-      shuffledMeasures = List.from(measures)..shuffle();
-      for (var measure in shuffledMeasures) {
-        measure.options.shuffle();
-      }
-      _currentOptions = List.from(shuffledMeasures[0].options);
-      _answerStatus = { for (var o in _currentOptions) o: null };
-    }
+    
+    _answerScaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.2,
+    ).animate(CurvedAnimation(
+      parent: _answerAnimationController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  void _initializeQuestions() {
+    setState(() {
+      _isLoading = true;
+    });
+
+    practiceQuestions = [
+      {
+        'question': 'Which one is heavier?',
+        'image1': 'assets/images/measures/dumbbell_feather.svg',
+        'image2': 'assets/images/measures/dumbbell_feather.svg',
+        'options': _shuffleOptions(['DUMBBELL', 'FEATHER'], 'DUMBBELL'),
+        'correctAnswer': 'DUMBBELL'
+      },
+      {
+        'question': 'Which container can hold more liquid?',
+        'image1': 'assets/images/measures/jug_cup.svg',
+        'image2': 'assets/images/measures/jug_cup.svg',
+        'options': _shuffleOptions(['JUG', 'CUP'], 'JUG'),
+        'correctAnswer': 'JUG'
+      },
+      {
+        'question': 'Which fruit is heavier?',
+        'image1': 'assets/images/measures/watermelon_apple.svg',
+        'image2': 'assets/images/measures/watermelon_apple.svg',
+        'options': _shuffleOptions(['WATERMELON', 'APPLE'], 'WATERMELON'),
+        'correctAnswer': 'WATERMELON'
+      },
+      {
+        'question': 'Which bottle has more capacity?',
+        'image1': 'assets/images/measures/bottle_comparison.svg',
+        'image2': 'assets/images/measures/bottle_comparison.svg',
+        'options': _shuffleOptions(['1L BOTTLE', '500ML BOTTLE'], '1L BOTTLE'),
+        'correctAnswer': '1L BOTTLE'
+      },
+      {
+        'question': 'Which object is heavier?',
+        'image1': 'assets/images/measures/books_pencil.svg',
+        'image2': 'assets/images/measures/books_pencil.svg',
+        'options': _shuffleOptions(['BOOKS', 'PENCIL'], 'BOOKS'),
+        'correctAnswer': 'BOOKS'
+      },
+    ];
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Future<void> _initializeTts() async {
@@ -280,512 +140,622 @@ class _Measures2ScreenState extends State<Measures2Screen> with TickerProviderSt
     await flutterTts.speak(text);
   }
 
-  void _startGame() {
-    setState(() {
-      score = 0;
-      currentQuestion = 0;
-      selectedAnswer = null;
-      showResult = false;
-      shuffledMeasures = List.from(measures)..shuffle();
-      for (var measure in shuffledMeasures) {
-        measure.options.shuffle();
-      }
-      _currentOptions = List.from(shuffledMeasures[0].options);
-      _answerStatus = { for (var o in _currentOptions) o: null };
-      _animationController.reset();
-      _animationController.forward();
-    });
+  List<String> _shuffleOptions(List<String> options, String correctAnswer) {
+    final shuffled = List<String>.from(options)..shuffle();
+    // Make sure correct answer is not always first
+    if (shuffled[0] == correctAnswer) {
+      // Swap with last element if first is correct answer
+      final temp = shuffled[0];
+      shuffled[0] = shuffled[shuffled.length - 1];
+      shuffled[shuffled.length - 1] = temp;
+    }
+    return shuffled;
   }
 
-  void _checkAnswer(String answer) {
+  Widget _buildAnswerOption(String option, bool isCorrect) {
+    final bool isSelected = selectedAnswer == option;
+    final bool isCorrectOption = option == practiceQuestions[currentQuestion]['correctAnswer'];
+    final bool isIncorrect = isSelected && !isCorrectOption;
+
+    return AnimatedBuilder(
+      animation: _answerAnimationController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: isSelected && isCorrectOption ? _answerScaleAnimation.value : 1.0,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _isAnswering ? null : () => _handleAnswer(option),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: _getOptionColor(isSelected, isCorrectOption, isIncorrect),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _getBorderColor(isSelected, isCorrectOption, isIncorrect),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      if (isSelected)
+                        BoxShadow(
+                          color: _getShadowColor(isCorrectOption),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          option,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: _getTextColor(isSelected, isCorrectOption, isIncorrect),
+                          ),
+                        ),
+                      ),
+                      if (showResult && isSelected)
+                        Icon(
+                          isCorrectOption ? Icons.check_circle : Icons.cancel,
+                          color: isCorrectOption ? Colors.green : Colors.red,
+                          size: 24,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Color _getOptionColor(bool isSelected, bool isCorrectOption, bool isIncorrect) {
+    if (!showResult) return isSelected ? Colors.purple.withOpacity(0.1) : Colors.white;
+    if (isSelected && isCorrectOption) return Colors.green.withOpacity(0.2);
+    if (isIncorrect) return Colors.red.withOpacity(0.2);
+    return Colors.white;
+  }
+
+  Color _getBorderColor(bool isSelected, bool isCorrectOption, bool isIncorrect) {
+    if (!showResult) return isSelected ? Colors.purple : Colors.grey.shade300;
+    if (isSelected && isCorrectOption) return Colors.green;
+    if (isIncorrect) return Colors.red;
+    return Colors.grey.shade300;
+  }
+
+  Color _getTextColor(bool isSelected, bool isCorrectOption, bool isIncorrect) {
+    if (!showResult) return isSelected ? Colors.purple : Colors.black87;
+    if (isSelected && isCorrectOption) return Colors.green;
+    if (isIncorrect) return Colors.red;
+    return Colors.black87;
+  }
+
+  Color _getShadowColor(bool isCorrectOption) {
+    if (!showResult) return Colors.purple.withOpacity(0.3);
+    return isCorrectOption ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3);
+  }
+
+  void _handleAnswer(String answer) async {
+    if (_isAnswering) return;
+    _isAnswering = true;
+
     setState(() {
       selectedAnswer = answer;
       showResult = true;
-      isCorrect = answer == shuffledMeasures[currentQuestion].example;
-      // Start answer animation
-      _answerAnimationController.forward().then((_) {
-        _answerAnimationController.reverse();
-      });
-      // Set answer status for all options
-      for (var o in _currentOptions) {
-        if (o == shuffledMeasures[currentQuestion].example) {
-          _answerStatus[o] = 'correct';
-        } else if (o == answer) {
-          _answerStatus[o] = 'incorrect';
-        } else {
-          _answerStatus[o] = null;
-        }
-      }
+      isCorrect = answer == practiceQuestions[currentQuestion]['correctAnswer'];
       if (isCorrect) {
         score++;
-        _animationController.reset();
-        _animationController.forward();
-        _speakText('Yay! You got it right! ${shuffledMeasures[currentQuestion].example} is correct!');
-      } else {
-        _speakText('Oops! Try again! Think about the measurement');
-      }
-      if (currentQuestion == shuffledMeasures.length - 1) {
-        SharedPreferenceService.saveGameProgress('measures_2', score, shuffledMeasures.length);
-      }
-      if (currentQuestion < shuffledMeasures.length - 1) {
-        Future.delayed(const Duration(milliseconds: 700), () {
-          _nextQuestion();
-        });
-      } else {
-        Future.delayed(const Duration(milliseconds: 700), () {
-          _showCompletionDialog();
+        _answerAnimationController.forward().then((_) {
+          _answerAnimationController.reverse();
         });
       }
     });
-  }
 
-  void _nextQuestion() {
-    setState(() {
-    if (currentQuestion < shuffledMeasures.length - 1) {
-        currentQuestion++;
-        selectedAnswer = null;
-        showResult = false;
-        _currentOptions = List.from(shuffledMeasures[currentQuestion].options);
-        _answerStatus = { for (var o in _currentOptions) o: null };
+    if (isCorrect) {
+      _speakText('Correct!');
     } else {
-        SharedPreferenceService.saveGameProgress('measures_2', score, shuffledMeasures.length);
-        _showCompletionDialog();
-      }
-    });
-  }
+      _speakText('Try again!');
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Color(0xFF6A1B9A),
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF6A1B9A),
-      systemNavigationBarIconBrightness: Brightness.light,
-    ));
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF7B2FF2),
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          widget.isGameMode ? 'Measures-2 Game' : 'Learn Measures-2',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: Color(0xFF7B2FF2),
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: Color(0xFF7B2FF2),
-          systemNavigationBarIconBrightness: Brightness.light,
-        ),
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
-          ),
-        ),
-        child: SafeArea(
-          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
-        ),
-      ),
-    );
-  }
+    await Future.delayed(const Duration(milliseconds: 1500));
 
-  Widget _buildLearningMode() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-          child: Text(
-            'Learn Measures-2',
-            style: TextStyle(
-              fontSize: 24,
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Introduction
-                  Text(
-                    'Understanding Measures-2',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Let\'s learn about more complex measures:',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
+    if (!mounted) return;
 
-                  // Measure Concepts
-                  ...measures.map((measure) {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              measure.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Center(
-                              child: measure.visual,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              measure.description,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-
-                  const SizedBox(height: 24),
-
-                  // Practice Section
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Removed 'Ready to Practice?' and 'Start Game' section
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGameMode() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Progress bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      'Question ${currentQuestion + 1}/${shuffledMeasures.length}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: LinearProgressIndicator(
-                      value: (currentQuestion + 1) / shuffledMeasures.length,
-                      backgroundColor: Colors.grey.withOpacity(0.2),
-                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                      minHeight: 8,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      'Score: $score',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Question
-            Text(
-              shuffledMeasures[currentQuestion].description,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.secondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            // Visual
-            Container(
-              height: 200,
-              width: double.infinity,
-              alignment: Alignment.center,
-            child: Center(
-                child: shuffledMeasures[currentQuestion].visual,
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Answer options
-          ..._currentOptions.map((option) {
-            final status = _answerStatus[option];
-              final isSelected = selectedAnswer == option;
-              Color backgroundColor;
-            Color borderColor;
-            Color textColor = Colors.black;
-            Widget? trailingIcon;
-            if (status == 'correct') {
-              backgroundColor = Colors.green;
-              borderColor = Colors.green.shade800;
-              textColor = Colors.white;
-              trailingIcon = const Icon(Icons.check_circle, color: Colors.white, size: 20);
-            } else if (status == 'incorrect') {
-              backgroundColor = Colors.red;
-              borderColor = Colors.red.shade800;
-              textColor = Colors.white;
-              trailingIcon = const Icon(Icons.cancel, color: Colors.white, size: 20);
-              } else if (isSelected) {
-                backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.2);
-              borderColor = Theme.of(context).colorScheme.primary;
-              } else {
-                backgroundColor = Colors.white;
-                borderColor = Colors.grey.shade300;
-              }
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-              child: AnimatedBuilder(
-                animation: _answerAnimationController,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: isSelected ? _answerScaleAnimation.value : 1.0,
-                    child: child,
-                  );
-                },
-                child: Material(
-                  borderRadius: BorderRadius.circular(12),
-                  elevation: isSelected ? 4 : 1,
-                  child: InkWell(
-                    onTap: showResult ? null : () => _checkAnswer(option),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: backgroundColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: borderColor,
-                          width: 2,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              option,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: textColor,
-                                fontWeight: isSelected || status == 'correct' ? FontWeight.bold : FontWeight.normal,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 2,
-                            ),
-                          ),
-                          if (trailingIcon != null) trailingIcon,
-                        ],
-                      ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          // No Next button
-        ],
-      ),
-    );
+    if (currentQuestion < practiceQuestions.length - 1) {
+      setState(() {
+        currentQuestion++;
+        selectedAnswer = '';
+        showResult = false;
+        _isAnswering = false;
+      });
+    } else {
+      _showCompletionDialog();
+    }
   }
 
   void _showCompletionDialog() {
-    final percentage = (score / shuffledMeasures.length) * 100;
+    final percentage = (score / practiceQuestions.length) * 100;
     final isPassed = percentage >= 50.0;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+    
+    // Save the game progress with the 50% threshold
+    SharedPreferenceService.saveGameProgress('measures_2', score, practiceQuestions.length).then((_) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            title: Text(
+              isPassed ? 'Congratulations!' : 'Keep Practicing!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: isPassed ? Colors.green : Colors.orange,
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header with Icon
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isPassed 
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.orange.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
                   isPassed ? Icons.emoji_events : Icons.school,
-                  size: 48,
+                  size: 64,
                   color: isPassed ? Colors.green : Colors.orange,
                 ),
-              ),
-              const SizedBox(height: 24),
-              // Title
-              Text(
-                isPassed ? 'Congratulations!' : 'Keep Practicing!',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: isPassed ? Colors.green : Colors.orange,
+                const SizedBox(height: 16),
+                Text(
+                  'Score: $score/${practiceQuestions.length}\n(${percentage.toStringAsFixed(1)}%)',
+                  style: const TextStyle(fontSize: 20),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 16),
-              // Score Display
-              Text(
-                'Score: $score/${shuffledMeasures.length} (${percentage.toStringAsFixed(1)}%)',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 16),
+                Text(
+                  isPassed
+                    ? 'Great job! You\'ve mastered this chapter!'
+                    : 'Almost there! Try again to score at least 50%.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16),
                 ),
-              ),
-              const SizedBox(height: 16),
-              // Message
-              Text(
-                isPassed
-                  ? 'You\'ve completed the Measures-2 practice!'
-                  : 'You\'re making progress! Keep practicing to improve.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 24),
-              // Buttons
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                alignment: WrapAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close dialog
-                      Navigator.of(context).pop(); // Return to home screen
-                    },
-                    icon: const Icon(Icons.home),
-                    label: const Text('Go to Home'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                child: const Text(
+                  'Back',
+                  style: TextStyle(
+                    fontSize: 18,
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close dialog
-                      setState(() {
-                        score = 0;
-                        currentQuestion = 0;
-                        showResult = false;
-                        selectedAnswer = null;
-                        shuffledMeasures = List.from(measures)..shuffle();
-                        for (var measure in shuffledMeasures) {
-                          measure.options.shuffle();
-                        }
-                      });
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Play Again'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.secondary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
                 ),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Return to previous screen
+                },
               ),
-          ],
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isPassed ? Colors.green : Colors.orange,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Play Again',
+                  style: TextStyle(fontSize: 18),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close dialog
+                  setState(() {
+                    score = 0;
+                    currentQuestion = 0;
+                    selectedAnswer = '';
+                    showResult = false;
+                    _isAnswering = false;
+                    _initializeQuestions(); // Reinitialize with shuffled questions
+                  });
+                },
               ),
             ],
-          ),
-        ),
-      ),
-    );
+          );
+        },
+      );
+    });
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _controller.dispose();
     _answerAnimationController.dispose();
     flutterTts.stop();
     super.dispose();
   }
 
-  Future<void> _saveGameState() async {
-    // Implementation of _saveGameState method
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Color(0xFF7B2FF2),
+        elevation: 0,
+        title: Text(
+          isGameMode ? 'Practice - Mass and Capacity' : 'Mass and Capacity',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Color(0xFF7B2FF2),
+          statusBarIconBrightness: Brightness.light,
+        ),
+      ),
+      body: SafeArea(
+        child: isGameMode ? _buildGameSection() : _buildLessonSection(),
+      ),
+    );
   }
+
+  Widget _buildLessonSection() {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Learn about Mass and Capacity',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF7B2FF2),
+            ),
+          ),
+          SizedBox(height: 24),
+          _buildLessonCard(
+            'Mass',
+            'Mass is how heavy something is.',
+            'assets/images/measures/dumbbell_feather.svg',
+            'Example: A dumbbell is heavier than a feather.',
+            'Measured in: kilograms (kg) and grams (g)',
+          ),
+          SizedBox(height: 16),
+          _buildLessonCard(
+            'Capacity',
+            'Capacity is how much something can hold.',
+            'assets/images/measures/jug_cup.svg',
+            'Example: A jug can hold more water than a cup.',
+            'Measured in: liters (L) and milliliters (mL)',
+          ),
+          SizedBox(height: 16),
+          _buildLessonCard(
+            'Comparing Mass',
+            'We can compare objects to see which is heavier.',
+            'assets/images/measures/watermelon_apple.svg',
+            'Example: A watermelon is heavier than an apple.',
+            'Compare using: heavier than, lighter than, same as',
+          ),
+          SizedBox(height: 16),
+          _buildLessonCard(
+            'Comparing Capacity',
+            'We can compare containers to see which holds more.',
+            'assets/images/measures/bottle_comparison.svg',
+            'Example: A 1L bottle holds more than a 500ml bottle.',
+            'Compare using: more than, less than, equal to',
+          ),
+          SizedBox(height: 16),
+          _buildLessonCard(
+            'Everyday Objects',
+            'We use mass and capacity measurements daily.',
+            'assets/images/measures/books_pencil.svg',
+            'Example: Books are heavier than pencils.',
+            'Used in: cooking, shopping, and more',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComparisonImage(String imagePath, String label, bool isLeft, {double size = 60}) {
+    return Expanded(
+      child: Column(
+        children: [
+          SizedBox(
+            height: size,
+            child: ClipRect(
+              child: Align(
+                alignment: isLeft ? Alignment.centerLeft : Alignment.centerRight,
+                widthFactor: 0.5,
+                child: SvgPicture.asset(
+                  imagePath,
+                  fit: BoxFit.contain,
+                  height: size,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.black87,
+            ),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComparisonRow(String imagePath, List<String> labels, {double size = 60}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildComparisonImage(imagePath, labels[0], true, size: size),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              'VS',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black54,
+              ),
+            ),
+          ),
+          _buildComparisonImage(imagePath, labels[1], false, size: size),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLessonCard(String title, String description, String imagePath, String example, String units) {
+    final images = {
+      'assets/images/measures/dumbbell_feather.svg': ['DUMBBELL', 'FEATHER'],
+      'assets/images/measures/jug_cup.svg': ['JUG', 'CUP'],
+      'assets/images/measures/watermelon_apple.svg': ['WATERMELON', 'APPLE'],
+      'assets/images/measures/bottle_comparison.svg': ['1L BOTTLE', '500ML BOTTLE'],
+      'assets/images/measures/books_pencil.svg': ['BOOKS', 'PENCIL'],
+    };
+
+    final labels = images[imagePath] ?? ['ITEM 1', 'ITEM 2'];
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title.toUpperCase(),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF7B2FF2),
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 24),
+            Center(
+              child: _buildComparisonRow(imagePath, labels),
+            ),
+            SizedBox(height: 24),
+            Text(
+              example,
+              style: TextStyle(
+                fontSize: 16,
+                fontStyle: FontStyle.italic,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              units.toUpperCase(),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGameSection() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+        ),
+      );
+    }
+
+    if (!isGameMode || currentQuestion >= practiceQuestions.length) {
+      return const SizedBox.shrink();
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Score: $score',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple,
+                  ),
+                ),
+                Text(
+                  'Question ${currentQuestion + 1}/${practiceQuestions.length}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              practiceQuestions[currentQuestion]['question'],
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.purple,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 32),
+          _buildComparisonRow(
+            practiceQuestions[currentQuestion]['image1'],
+            practiceQuestions[currentQuestion]['options'],
+            size: 120,
+          ),
+          const SizedBox(height: 32),
+          ...practiceQuestions[currentQuestion]['options'].map((option) => 
+            _buildAnswerOption(option, option == practiceQuestions[currentQuestion]['correctAnswer'])
+          ).toList(),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+}
+
+class WatermelonPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint fillPaint = Paint()
+      ..color = Color(0xFF4CAF50)  // Green color for watermelon
+      ..style = PaintingStyle.fill;
+    
+    final Paint stripePaint = Paint()
+      ..color = Color(0xFF388E3C)  // Darker green for stripes
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    
+    final Paint fleshPaint = Paint()
+      ..color = Color(0xFFFF5252)  // Red color for flesh
+      ..style = PaintingStyle.fill;
+    
+    // Draw main watermelon shape
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(size.width / 2, size.height / 2),
+        width: size.width * 0.9,
+        height: size.height * 0.8,
+      ),
+      fillPaint,
+    );
+
+    // Draw stripes
+    for (int i = 0; i < 5; i++) {
+      double y = size.height * (0.3 + i * 0.1);
+      canvas.drawLine(
+        Offset(size.width * 0.2, y),
+        Offset(size.width * 0.8, y),
+        stripePaint,
+      );
+    }
+
+    // Draw a small section showing the red flesh
+    final Path fleshPath = Path()
+      ..moveTo(size.width * 0.8, size.height * 0.3)
+      ..lineTo(size.width * 0.9, size.height * 0.5)
+      ..lineTo(size.width * 0.8, size.height * 0.7)
+      ..close();
+    canvas.drawPath(fleshPath, fleshPaint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+class ApplePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint bodyPaint = Paint()
+      ..color = Color(0xFFF44336)  // Red color for apple
+      ..style = PaintingStyle.fill;
+    
+    final Paint stemPaint = Paint()
+      ..color = Color(0xFF795548)  // Brown color for stem
+      ..style = PaintingStyle.fill;
+    
+    final Paint leafPaint = Paint()
+      ..color = Color(0xFF4CAF50)  // Green color for leaf
+      ..style = PaintingStyle.fill;
+    
+    // Draw main apple body
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height / 2),
+      size.width * 0.4,
+      bodyPaint,
+    );
+    
+    // Draw stem
+    final Path stemPath = Path()
+      ..moveTo(size.width * 0.45, size.height * 0.2)
+      ..lineTo(size.width * 0.55, size.height * 0.2)
+      ..lineTo(size.width * 0.5, size.height * 0.1)
+      ..close();
+    canvas.drawPath(stemPath, stemPaint);
+    
+    // Draw leaf
+    final Path leafPath = Path()
+      ..moveTo(size.width * 0.6, size.height * 0.2)
+      ..quadraticBezierTo(
+        size.width * 0.7,
+        size.height * 0.1,
+        size.width * 0.8,
+        size.height * 0.2,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.7,
+        size.height * 0.25,
+        size.width * 0.6,
+        size.height * 0.2,
+      );
+    canvas.drawPath(leafPath, leafPaint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 } 

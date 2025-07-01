@@ -24,12 +24,6 @@ class Measures2ChapterScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Color(0xFF7B2FF2),
           statusBarIconBrightness: Brightness.light,

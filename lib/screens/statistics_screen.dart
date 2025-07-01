@@ -6,6 +6,43 @@ import '../services/shared_preference_service.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+class VennDiagramPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = Colors.blue.withOpacity(0.3)
+      ..style = PaintingStyle.fill;
+
+    final Paint borderPaint = Paint()
+      ..color = Colors.blue
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    // Draw first circle
+    final Offset center1 = Offset(size.width * 0.4, size.height * 0.5);
+    final double radius = size.width * 0.3;
+    canvas.drawCircle(center1, radius, paint);
+    canvas.drawCircle(center1, radius, borderPaint);
+
+    // Draw second circle with overlap
+    final Paint paint2 = Paint()
+      ..color = Colors.purple.withOpacity(0.3)
+      ..style = PaintingStyle.fill;
+
+    final Paint borderPaint2 = Paint()
+      ..color = Colors.purple
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final Offset center2 = Offset(size.width * 0.6, size.height * 0.5);
+    canvas.drawCircle(center2, radius, paint2);
+    canvas.drawCircle(center2, radius, borderPaint2);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
 class Statistic {
   final String name;
   final Widget visual;
@@ -29,7 +66,7 @@ class StatisticsScreen extends StatefulWidget {
   State<StatisticsScreen> createState() => _StatisticsScreenState();
 }
 
-class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerProviderStateMixin {
+class _StatisticsScreenState extends State<StatisticsScreen> with TickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
   late bool isGameMode;
   int score = 0;
@@ -39,12 +76,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
   bool isCorrect = false;
   List<Statistic> gameQuestions = [];
   late AnimationController _animationController;
+  late AnimationController _answerAnimationController;
   late Animation<double> _animation;
-  late Animation<double> _scaleAnimation;
+  late Animation<double> _answerScaleAnimation;
   bool _isLoading = true;
   bool _isAnswering = false;
 
-  final List<Statistic> statistics = [
+  List<Statistic> statistics = [
     Statistic(
       name: 'Count',
       visual: _buildStatisticVisual('🔢', 'Count'),
@@ -89,33 +127,170 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     );
   }
 
+  static Widget _buildVennDiagramVisual() {
+    return CustomPaint(
+      size: const Size(100, 100),
+      painter: VennDiagramPainter(),
+    );
+  }
+
+  static Widget _buildGameVisual(String mainEmoji, List<String> content) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.purple.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.purple.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              mainEmoji,
+              style: const TextStyle(fontSize: 40),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...content.map((text) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          )).toList(),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
       vsync: this,
+      duration: const Duration(milliseconds: 500),
     );
-    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
+
+    _answerAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
     );
+    _answerScaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.2,
+    ).animate(CurvedAnimation(
+      parent: _answerAnimationController,
+      curve: Curves.easeInOut,
+    ));
+    
     isGameMode = widget.isGameMode;
     _initializeTts();
 
     if (isGameMode) {
-      _startGame(); // Always start fresh in game mode
+      _startGame();
     } else {
-      _initializeStorage(); // Only restore state in learning mode
+      setState(() {
+        _isLoading = false;
+      });
     }
+  }
+
+  List<String> _shuffleOptions(String correctAnswer, List<String> allOptions) {
+    final shuffled = List<String>.from(allOptions)..shuffle();
+    // Remove correct answer if it exists in shuffled list
+    shuffled.remove(correctAnswer);
+    // Insert correct answer at random position
+    final randomPosition = DateTime.now().millisecondsSinceEpoch % shuffled.length;
+    shuffled.insert(randomPosition, correctAnswer);
+    return shuffled;
+  }
+
+  void _startGame() {
+    setState(() {
+      isGameMode = true;
+      score = 0;
+      currentQuestion = 0;
+      selectedAnswer = null;
+      showResult = false;
+      _isAnswering = false;
+
+      // Create game-specific questions with shuffled options
+      gameQuestions = [
+        Statistic(
+          name: '5 fruits',
+          visual: _buildGameVisual('🔢', [
+            '🍎 🍎 🍎',
+            '🍊 🍊',
+            'How many fruits?'
+          ]),
+          description: 'Count all the fruits shown above',
+          options: _shuffleOptions('5 fruits', ['5 fruits', '3 fruits', '4 fruits', '6 fruits']),
+        ),
+        Statistic(
+          name: '1,2,3,4,5',
+          visual: _buildGameVisual('📊', [
+            '3️⃣ 1️⃣ 4️⃣',
+            '2️⃣ 5️⃣',
+            'Sort these numbers'
+          ]),
+          description: 'Which shows these numbers in order?',
+          options: _shuffleOptions('1,2,3,4,5', ['1,2,3,4,5', '5,4,3,2,1', '1,3,2,5,4', '2,1,4,3,5']),
+        ),
+        Statistic(
+          name: 'Elephant is bigger',
+          visual: _buildGameVisual('⚖️', [
+            '🐘 vs 🐁',
+            'Compare size'
+          ]),
+          description: 'Compare the size of these animals',
+          options: _shuffleOptions('Elephant is bigger', ['Elephant is bigger', 'Mouse is bigger', 'Same size', 'Cannot compare']),
+        ),
+        Statistic(
+          name: 'Animals and Vehicles',
+          visual: _buildGameVisual('👥', [
+            '🐶 🐱 🐰',
+            '🚗 🚌 🚲',
+            'Group similar things'
+          ]),
+          description: 'Which shows a correct grouping?',
+          options: _shuffleOptions('Animals and Vehicles', ['Animals and Vehicles', 'Big and Small', 'Fast and Slow', 'Old and New']),
+        ),
+        Statistic(
+          name: 'Shoes and Socks',
+          visual: _buildGameVisual('🔄', [
+            '👟 🧦',
+            'Find what goes together'
+          ]),
+          description: 'Which pair matches together?',
+          options: _shuffleOptions('Shoes and Socks', ['Shoes and Socks', 'Shoes and Hat', 'Socks and Gloves', 'None match']),
+        ),
+      ];
+      _isLoading = false;
+    });
+
+    _animationController.reset();
+    _animationController.forward();
   }
 
   Future<void> _initializeTts() async {
@@ -168,32 +343,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     }
   }
 
-  void _startGame() {
-    setState(() {
-      isGameMode = true;
-      score = 0;
-      currentQuestion = 0;
-      selectedAnswer = null;
-      showResult = false;
-      _isAnswering = false;
-
-      // Deep copy statistics for gameQuestions and shuffle both questions and options
-      gameQuestions = List<Statistic>.from(statistics.map((stat) =>
-        Statistic(
-          name: stat.name,
-          visual: stat.visual,
-          description: stat.description,
-          options: List<String>.from(stat.options)..shuffle(),
-        )
-      ))..shuffle();
-      // If you want to limit to 5 questions, uncomment the next line:
-      // gameQuestions = gameQuestions.take(5).toList();
-
-      _animationController.reset();
-      _animationController.forward();
-    });
-  }
-
   void _checkAnswer(String answer) {
     if (_isAnswering) return;
     _isAnswering = true;
@@ -202,26 +351,31 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
       selectedAnswer = answer;
       showResult = true;
       isCorrect = answer == gameQuestions[currentQuestion].name;
-      if (isCorrect) score++;
-    });
-
-    _animationController.forward().then((_) {
-      _animationController.reverse();
-    });
-
       if (isCorrect) {
-      _speakText('Correct! ${gameQuestions[currentQuestion].name} is right!');
-      } else {
-      _speakText('Try again!');
+        score++;
+        // Save progress immediately without delay
+        SharedPreferenceService.saveGameProgress('statistics', score, gameQuestions.length);
+        _saveGameState();
+        _answerAnimationController.forward().then((_) {
+          _answerAnimationController.reverse();
+        });
       }
+    });
 
-    Future.delayed(const Duration(milliseconds: 800), () {
+    if (isCorrect) {
+      _speakText('Correct! ${gameQuestions[currentQuestion].name} is right!');
+    } else {
+      _speakText('Try again!');
+    }
+
+    // Reduced delay from 800ms to 500ms
+    Future.delayed(const Duration(milliseconds: 500), () async {
       if (!mounted) return;
       if (currentQuestion < gameQuestions.length - 1) {
-    setState(() {
-        currentQuestion++;
-        selectedAnswer = null;
-        showResult = false;
+        setState(() {
+          currentQuestion++;
+          selectedAnswer = null;
+          showResult = false;
           _isAnswering = false;
         });
         _animationController.reset();
@@ -231,7 +385,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
           showResult = false;
           _isAnswering = false;
         });
-        _showGameCompletionDialog();
+        
+        if (mounted) {
+          _showGameCompletionDialog();
+        }
       }
     });
   }
@@ -240,16 +397,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     final percentage = (score / gameQuestions.length) * 100;
     final isPassed = percentage >= 50.0;
     
-    // Save score to SharedPreferenceService
-    SharedPreferenceService.saveGameProgress('statistics', score, gameQuestions.length);
-    
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
-          shape: RoundedRectangleBorder(
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          ),
+        ),
         elevation: 0,
         backgroundColor: Colors.transparent,
         child: Container(
@@ -319,20 +473,23 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                 alignment: WrapAlignment.center,
                 children: [
                   ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Return to home screen
-                },
-                    icon: const Icon(Icons.home),
-                    label: const Text('Main Menu'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                        '/analysis',
+                        (route) => route.isFirst || route.settings.name == '/main_menu',
+                      );
+                    },
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Back'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                   ElevatedButton.icon(
                     onPressed: () {
@@ -347,10 +504,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -361,188 +518,299 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF7B2FF2),
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          widget.isGameMode ? 'Statistics Game' : 'Learn Statistics',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+    return WillPopScope(
+      onWillPop: () async {
+        if (isGameMode) {
+          setState(() {
+            isGameMode = false;
+          });
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(isGameMode ? 'Statistics Practice' : 'Statistics'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (isGameMode) {
+                setState(() {
+                  isGameMode = false;
+                });
+              } else {
+                Navigator.of(context).pop();
+              }
+            },
           ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: Color(0xFF7B2FF2),
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: Color(0xFF7B2FF2),
-          systemNavigationBarIconBrightness: Brightness.light,
-        ),
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
-          ),
-        ),
-        child: SafeArea(
-          child: isGameMode ? _buildGameMode() : _buildLearningMode(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGameMode() {
-    if (gameQuestions.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    final currentQ = gameQuestions[currentQuestion];
-    final isSmallScreen = MediaQuery.of(context).size.height < 600;
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+        body: SafeArea(
+          child: SingleChildScrollView(
             child: Column(
               children: [
-          LinearProgressIndicator(
-            value: (currentQuestion + 1) / gameQuestions.length,
-            backgroundColor: Colors.grey[200],
-            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF7B2FF2)),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Question ${currentQuestion + 1} of ${gameQuestions.length}',
-            style: const TextStyle(fontSize: 16, color: Color(0xFF7B2FF2)),
+                if (!isGameMode) ...[
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Learn about Statistics',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple,
                       ),
-          const SizedBox(height: 16),
-                      Expanded(
-                        flex: 2,
-            child: Center(child: currentQ.visual),
-          ),
-          Expanded(
-            flex: 3,
-            child: ListView.builder(
-              itemCount: currentQ.options.length,
-              itemBuilder: (context, index) {
-                final option = currentQ.options[index];
-                final isSelected = selectedAnswer == option;
-                final isCorrectAnswer = showResult && option == currentQ.name;
-                final isWrongAnswer = showResult && isSelected && option != currentQ.name;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                        decoration: BoxDecoration(
-                      color: isCorrectAnswer
-                          ? Colors.green.withOpacity(0.2)
-                          : isWrongAnswer
-                              ? Colors.red.withOpacity(0.2)
-                              : isSelected
-                                  ? const Color(0xFF7B2FF2).withOpacity(0.1)
-                                  : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                        color: isCorrectAnswer
-                            ? Colors.green
-                            : isWrongAnswer
-                                ? Colors.red
-                                : isSelected
-                                    ? const Color(0xFF7B2FF2)
-                                    : Colors.grey,
-                              width: 2,
-                            ),
-                          ),
-                    child: ListTile(
-                      onTap: showResult ? null : () => _checkAnswer(option),
-                      title: Text(option, style: const TextStyle(color: Color(0xFF7B2FF2))),
-                      trailing: showResult
-                          ? Icon(
-                              isCorrectAnswer
-                                  ? Icons.check_circle
-                                  : isWrongAnswer
-                                      ? Icons.cancel
-                                      : null,
-                              color: isCorrectAnswer ? Colors.green : Colors.red,
-                            )
-                          : null,
-                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  );
-              },
                   ),
-          ),
+                  const SizedBox(height: 20),
+                  _buildLessonSection(),
+                ] else ...[
+                  if (_isLoading || gameQuestions.isEmpty) 
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+                        ),
+                      ),
+                    )
+                  else
+                    _buildGameSection(),
+                ],
               ],
             ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildLearningMode() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-          child: Text(
-            'Learn Statistics',
-            style: const TextStyle(
-              fontSize: 24,
-              color: Color(0xFF7B2FF2),
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
+  Widget _buildLessonSection() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: statistics.length,
+      shrinkWrap: true,
+      physics: const ClampingScrollPhysics(),
+      itemBuilder: (context, index) {
+        final statistic = statistics[index];
+        return Card(
+          elevation: 4,
+          margin: const EdgeInsets.only(bottom: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-        ),
-        Expanded(
-          child: SingleChildScrollView(
+          child: InkWell(
+            onTap: () => _speakText('${statistic.name}. ${statistic.description}'),
+            borderRadius: BorderRadius.circular(16),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: statistics.map((statistic) {
-                    return Card(
-                    color: Colors.white,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            statistic.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF7B2FF2),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Center(child: statistic.visual),
-                          const SizedBox(height: 12),
-                          Text(
-                            statistic.description,
-                            style: const TextStyle(fontSize: 16, color: Color(0xFF7B2FF2)),
-                          ),
-                        ],
-                      ),
+                children: [
+                  Text(
+                    statistic.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF7B2FF2),
                     ),
-                  );
-                }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  Center(child: statistic.visual),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Description:',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    statistic.description,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
               ),
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
+  }
+
+  Widget _buildGameSection() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+        ),
+      );
+    }
+
+    if (!isGameMode || currentQuestion >= gameQuestions.length) {
+      return const SizedBox.shrink();
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          // Score Display
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Score: $score',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple,
+                  ),
+                ),
+                Text(
+                  'Question ${currentQuestion + 1}/${gameQuestions.length}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Progress Indicator
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: LinearProgressIndicator(
+              value: (currentQuestion + 1) / gameQuestions.length,
+              backgroundColor: Colors.grey[200],
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.purple),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Question Visual
+          gameQuestions[currentQuestion].visual,
+          const SizedBox(height: 20),
+          // Question Description
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              gameQuestions[currentQuestion].description,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Answer Options
+          ...gameQuestions[currentQuestion].options.map((option) => _buildAnswerOption(option)).toList(),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnswerOption(String option) {
+    final isSelected = selectedAnswer == option;
+    final isCorrectOption = option == gameQuestions[currentQuestion].name;
+    final isIncorrect = isSelected && !isCorrectOption;
+    
+    return AnimatedBuilder(
+      animation: _answerAnimationController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: isSelected && isCorrectOption ? _answerScaleAnimation.value : 1.0,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: _getOptionColor(isSelected, isCorrectOption, isIncorrect),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _getBorderColor(isSelected, isCorrectOption, isIncorrect),
+                width: 2,
+              ),
+              boxShadow: [
+                if (isSelected)
+                  BoxShadow(
+                    color: _getShadowColor(isCorrectOption),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: selectedAnswer == null ? () => _checkAnswer(option) : null,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          option,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: _getTextColor(isSelected, isCorrectOption, isIncorrect),
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                      if (showResult && isSelected)
+                        Icon(
+                          isCorrectOption ? Icons.check_circle : Icons.cancel,
+                          color: isCorrectOption ? Colors.green : Colors.red,
+                          size: 24,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Color _getOptionColor(bool isSelected, bool isCorrectOption, bool isIncorrect) {
+    if (!showResult) return isSelected ? Colors.purple.withOpacity(0.1) : Colors.white;
+    if (isSelected && isCorrectOption) return Colors.green.withOpacity(0.2);
+    if (isIncorrect) return Colors.red.withOpacity(0.2);
+    return Colors.white;
+  }
+
+  Color _getBorderColor(bool isSelected, bool isCorrectOption, bool isIncorrect) {
+    if (!showResult) return isSelected ? Colors.purple : Colors.grey.shade300;
+    if (isSelected && isCorrectOption) return Colors.green;
+    if (isIncorrect) return Colors.red;
+    return Colors.grey.shade300;
+  }
+
+  Color _getTextColor(bool isSelected, bool isCorrectOption, bool isIncorrect) {
+    if (!showResult) return isSelected ? Colors.purple : Colors.black87;
+    if (isSelected && isCorrectOption) return Colors.green;
+    if (isIncorrect) return Colors.red;
+    return Colors.black87;
+  }
+
+  Color _getShadowColor(bool isCorrectOption) {
+    if (!showResult) return Colors.purple.withOpacity(0.3);
+    return isCorrectOption ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3);
   }
 
   @override
   void dispose() {
     flutterTts.stop();
     _animationController.dispose();
+    _answerAnimationController.dispose();
     super.dispose();
   }
 } 

@@ -1,17 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,30L30,42L54,54L78,42L54,30Z"/>
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M36,48V72L54,84L72,72V48L54,60L36,48Z"/>
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="4"
-        android:pathData="M54,60V84"/>
-</vector> 
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Center the new 3D app icon with proper margins for adaptive icon safe zone -->
+    <item
+        android:width="76dp"
+        android:height="76dp"
+        android:gravity="center">
+        <bitmap
+            android:src="@drawable/playstore_icon"
+            android:gravity="center" />
+    </item>
+</layer-list> 

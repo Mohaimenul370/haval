@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:flutter_tts/flutter_tts.dart';
 import '../services/shared_preference_service.dart';
 import 'package:flutter/services.dart';
+import 'dart:math';
 
 // --- LESSON DATA ---
 class Fractions2Lesson {
@@ -84,40 +85,58 @@ class _Fractions2ScreenState extends State<Fractions2Screen> with TickerProvider
     });
   }
 
-  void _checkAnswer(String answer) {
+  Future<void> _checkAnswer(String answer) async {
+    if (showResult) return; // Prevent multiple answers while showing result
+    
     setState(() {
       selectedAnswer = answer;
       showResult = true;
       isCorrect = answer == shuffledQuestions[currentQuestion].answer;
     });
-    _scaleAnimationController.forward().then((_) {
-      _scaleAnimationController.reverse();
-    });
+
     if (isCorrect) {
-      score++;
+      setState(() {
+        score++;
+      });
+      
+      _scaleAnimationController.forward().then((_) {
+        _scaleAnimationController.reverse();
+      });
       _speakText('Correct!');
     } else {
       _speakText('Try again!');
     }
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (!mounted) return;
-      if (currentQuestion < shuffledQuestions.length - 1) {
-        setState(() {
-          currentQuestion++;
-          selectedAnswer = null;
-          showResult = false;
-          _scaleAnimationController.reset();
-        });
-      } else {
-        _showCompletionDialog();
-      }
-    });
+
+    // Shorter delay for better responsiveness
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    
+    if (currentQuestion < shuffledQuestions.length - 1) {
+      setState(() {
+        currentQuestion++;
+        selectedAnswer = null;
+        showResult = false;
+        _scaleAnimationController.reset();
+      });
+    } else {
+      _showCompletionDialog();
+    }
   }
 
   void _showCompletionDialog() {
     final percentage = (score / shuffledQuestions.length) * 100;
     final isPassed = percentage >= 50.0;
-    SharedPreferenceService.saveGameProgress('fractions_2', score, shuffledQuestions.length);
+    
+    // Save the game progress immediately without waiting
+    if (isPassed) {
+      SharedPreferenceService.saveGameProgress('fractions_2', score, shuffledQuestions.length);
+    }
+
+    // Show dialog immediately without waiting for save to complete
+    _showDialog(percentage, isPassed);
+  }
+
+  void _showDialog(double percentage, bool isPassed) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -217,6 +236,16 @@ class _Fractions2ScreenState extends State<Fractions2Screen> with TickerProvider
                         color: Color(0xFFf357a8),
                       ),
                     ),
+                    if (!isPassed) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'You need 50% to pass',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.orange[700],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -241,21 +270,23 @@ class _Fractions2ScreenState extends State<Fractions2Screen> with TickerProvider
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      Navigator.of(context).pop();
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                        '/fractions_2',
+                        (route) => route.isFirst || route.settings.name == '/main_menu',
+                      );
                     },
-                    icon: const Icon(Icons.home),
-                    label: const Text('Go to Menu'),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Back'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF7B2FF2),
-                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.grey[200],
+                      foregroundColor: Colors.black87,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
-                  if (isPassed)
-                    ElevatedButton.icon(
+                  ElevatedButton.icon(
                       onPressed: () {
                         Navigator.of(context).pop();
                         _startGame();
@@ -263,7 +294,7 @@ class _Fractions2ScreenState extends State<Fractions2Screen> with TickerProvider
                       icon: const Icon(Icons.refresh),
                       label: const Text('Play Again'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFf357a8),
+                        backgroundColor: Color(0xFF7B2FF2),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -288,11 +319,79 @@ class _Fractions2ScreenState extends State<Fractions2Screen> with TickerProvider
       systemNavigationBarColor: Color(0xFF7B2FF2),
       systemNavigationBarIconBrightness: Brightness.light,
     ));
+
+    if (isGameMode) {
+      return _buildGameModeScreen();
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.isGameMode ? 'Fractions 2 Practice' : 'Fractions 2 Lessons',
-          style: const TextStyle(
+        title: const Text(
+          'Fractions 2 Lessons',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        backgroundColor: Color(0xFF7B2FF2),
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: fractions2Lessons.length,
+        itemBuilder: (context, index) {
+          final lesson = fractions2Lessons[index];
+          return Card(
+            elevation: 4,
+            margin: const EdgeInsets.only(bottom: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: InkWell(
+              onTap: () => _speakText('${lesson.title}. ${lesson.description}'),
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      lesson.title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF7B2FF2),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      lesson.description,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Center(child: lesson.visual),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildGameModeScreen() {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Fractions 2 Practice',
+          style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -312,119 +411,143 @@ class _Fractions2ScreenState extends State<Fractions2Screen> with TickerProvider
           ),
         ),
         child: SafeArea(
-          child: widget.isGameMode ? _buildGameMode() : _buildLessonMode(),
+          child: _buildGameMode(),
         ),
       ),
     );
   }
 
-  Widget _buildLessonMode() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: fractions2Lessons.length,
-      itemBuilder: (context, index) {
-        final lesson = fractions2Lessons[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    lesson.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: Color(0xFF7B2FF2),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    lesson.description,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  lesson.visual,
-                ],
-              ),
-            ),
+  Widget _buildGameMode() {
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: _buildGameContent(),
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
-  Widget _buildGameMode() {
+  Widget _buildGameContent() {
     final q = shuffledQuestions[currentQuestion];
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
+    return Column(
+      children: [
+        // Score and Progress Display
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF7B2FF2).withOpacity(0.1),
+                Color(0xFFF3EFFF).withOpacity(0.1),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Question',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF7B2FF2).withOpacity(0.7),
+                    ),
+                  ),
+                  Text(
+                    '${currentQuestion + 1} of ${shuffledQuestions.length}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF7B2FF2),
+                    ),
+                  ),
+                ],
+              ),
+              ScaleTransition(
+                scale: _scaleAnimation,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF7B2FF2).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.star,
+                        color: Color(0xFF7B2FF2),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Score: $score',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF7B2FF2),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        q.visual,
+        const SizedBox(height: 16),
+        Text(
+          q.question,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        ...q.options.map((option) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: ElevatedButton(
+            onPressed: showResult ? null : () => _checkAnswer(option),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: option == selectedAnswer
+                  ? (isCorrect ? Colors.green : Colors.red)
+                  : Color(0xFF7B2FF2).withOpacity(0.1),
+              foregroundColor: Color(0xFF7B2FF2),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            child: Text(
+              option,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        )),
+        const SizedBox(height: 24),
+        if (showResult)
           Text(
-            'Question ${currentQuestion + 1} of ${shuffledQuestions.length}',
-            style: const TextStyle(
+            isCorrect ? 'Correct!' : 'Try again!',
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF7B2FF2),
+              color: isCorrect ? Colors.green : Colors.red,
             ),
           ),
-          const SizedBox(height: 16),
-          q.visual,
-          const SizedBox(height: 16),
-          Text(
-            q.question,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ...q.options.map((option) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: ElevatedButton(
-              onPressed: showResult ? null : () => _checkAnswer(option),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: option == selectedAnswer
-                    ? (isCorrect ? Colors.green : Colors.red)
-                    : Color(0xFF7B2FF2).withOpacity(0.1),
-                foregroundColor: Color(0xFF7B2FF2),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-              child: Text(
-                option,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          )),
-          const SizedBox(height: 24),
-          if (showResult)
-            Text(
-              isCorrect ? 'Correct!' : 'Try again!',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isCorrect ? Colors.green : Colors.red,
-              ),
-            ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -432,144 +555,313 @@ class _Fractions2ScreenState extends State<Fractions2Screen> with TickerProvider
   List<Fractions2Lesson> get fractions2Lessons => [
     Fractions2Lesson(
       title: 'What is a Half?',
-      description: 'A half is one of two equal parts of a whole. We write it as ½.',
+      description: 'A fraction is a part of a whole. When something is divided into two equal parts, each part is called a half (½).',
       visual: Center(
-        child: Row(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 60, height: 60,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: Colors.grey[200],
                 shape: BoxShape.circle,
               ),
-              child: Row(
+              child: Stack(
                 children: [
-                  Container(width: 30, height: 60, color: Color(0xFF7B2FF2)),
-                  Container(width: 30, height: 60, color: Colors.transparent),
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Color(0xFF7B2FF2), width: 2),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: 2,
+                      height: 100,
+                      color: Color(0xFF7B2FF2),
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(width: 16),
-            const Text('½', style: TextStyle(fontSize: 28, color: Color(0xFF7B2FF2), fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            Text(
+              '½',
+              style: TextStyle(
+                fontSize: 32,
+                color: Color(0xFF7B2FF2),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),
     ),
     Fractions2Lesson(
-      title: 'Halves of Objects',
-      description: 'When you cut something into two equal parts, each part is a half. Both parts must be the same size.',
+      title: 'Sharing Food',
+      description: 'We use halves when sharing food like sweets, pizza, or cookies. Each person gets the same amount when we share between two.',
       visual: Center(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 60, height: 40,
+              width: 120,
+              height: 120,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: Colors.orange[100],
+                shape: BoxShape.circle,
+              ),
+              child: Stack(
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.orange, width: 2),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: 2,
+                      height: 120,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  Positioned(
+                    top: 30,
+                    left: 30,
+                    child: Text(
+                      '½',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.orange[800],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 30,
+                    right: 30,
+                    child: Text(
+                      '½',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.orange[800],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+    Fractions2Lesson(
+      title: 'Halving Liquids',
+      description: 'When we pour a full jug of juice into two equal glasses, each glass has half of the juice. When we pour them back, they make a whole jug again.',
+      visual: Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 60,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.blue[100],
+                border: Border.all(color: Colors.blue, width: 2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Container(width: 30, height: 40, color: Color(0xFF7B2FF2)),
-                  Container(width: 30, height: 40, color: Colors.transparent),
+                  Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.blue[400],
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(6),
+                        topRight: Radius.circular(6),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(width: 16),
-            Container(
-              width: 60, height: 40,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(8),
+            SizedBox(width: 20),
+            Icon(Icons.arrow_forward, color: Color(0xFF7B2FF2), size: 24),
+            SizedBox(width: 20),
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.blue[100],
+                    border: Border.all(color: Colors.blue, width: 2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.blue[400],
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(6),
+                            topRight: Radius.circular(6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 10),
+                Container(
+                  width: 40,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.blue[100],
+                    border: Border.all(color: Colors.blue, width: 2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.blue[400],
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(6),
+                            topRight: Radius.circular(6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+    Fractions2Lesson(
+      title: 'Half Past Time',
+      description: 'We use halves when telling time. When the minute hand points to 6, it means 30 minutes have passed - we call this "half past".',
+      visual: Center(
+        child: Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            shape: BoxShape.circle,
+            border: Border.all(color: Color(0xFF7B2FF2), width: 2),
+          ),
+          child: Stack(
+            children: [
+              // Clock center
+              Center(
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Color(0xFF7B2FF2),
+                    shape: BoxShape.circle,
+                  ),
+                ),
               ),
-              child: Row(
-                children: [
-                  Container(width: 20, height: 40, color: Color(0xFF7B2FF2)),
-                  Container(width: 40, height: 40, color: Colors.transparent),
-                ],
+              // Hour markers
+              ...List.generate(12, (index) {
+                final angle = (index * 30) * 3.14159 / 180;
+                return Positioned(
+                  left: 60 + 50 * sin(angle) - 2,
+                  top: 60 - 50 * cos(angle) - 2,
+                  child: Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF7B2FF2),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                );
+              }),
+              // Hour hand (pointing to 4)
+              Transform.rotate(
+                angle: 4 * 30 * 3.14159 / 180,
+                child: Container(
+                  width: 2,
+                  height: 30,
+                  color: Color(0xFF7B2FF2),
+                  margin: EdgeInsets.only(bottom: 30),
+                ),
+              ),
+              // Minute hand (pointing to 6)
+              Transform.rotate(
+                angle: 6 * 30 * 3.14159 / 180,
+                child: Container(
+                  width: 2,
+                  height: 45,
+                  color: Color(0xFF7B2FF2),
+                  margin: EdgeInsets.only(bottom: 45),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+    Fractions2Lesson(
+      title: 'Half of Numbers',
+      description: 'We can find half of a number by dividing it into two equal groups. For example, half of 10 is 5 because 5 + 5 = 10.',
+      visual: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ...List.generate(5, (index) => Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF7B2FF2),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                )),
+                SizedBox(width: 20),
+                ...List.generate(5, (index) => Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF7B2FF2),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                )),
+              ],
+            ),
+            SizedBox(height: 10),
+            Text(
+              '5 + 5 = 10',
+              style: TextStyle(
+                fontSize: 24,
+                color: Color(0xFF7B2FF2),
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ],
-        ),
-      ),
-    ),
-    Fractions2Lesson(
-      title: 'Halves of Sets',
-      description: 'Half of a set means splitting the group into two equal parts. For example, half of 8 apples is 4 apples.',
-      visual: Center(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(8, (i) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: Icon(Icons.apple, color: i < 4 ? Color(0xFF7B2FF2) : Colors.grey, size: 28),
-          )),
-        ),
-      ),
-    ),
-    Fractions2Lesson(
-      title: 'Sharing Equally',
-      description: 'When you share a set equally between two, each person gets half. For example, 6 cookies shared equally means each gets 3.',
-      visual: Center(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(children: List.generate(3, (i) => Icon(Icons.cookie, color: Color(0xFF7B2FF2), size: 28))),
-            const SizedBox(width: 16),
-            Row(children: List.generate(3, (i) => Icon(Icons.cookie, color: Colors.orange, size: 28))),
-          ],
-        ),
-      ),
-    ),
-    Fractions2Lesson(
-      title: 'Putting Halves Together',
-      description: 'Two halves of the same shape or set make a whole. ½ + ½ = 1 whole.',
-      visual: Center(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 30, height: 40,
-              color: Color(0xFF7B2FF2),
-            ),
-            Container(
-              width: 30, height: 40,
-              color: Colors.orange,
-            ),
-            const SizedBox(width: 16),
-            Container(
-              width: 60, height: 40,
-              color: Color(0xFF7B2FF2).withOpacity(0.5),
-              child: null,
-            ),
-          ],
-        ),
-      ),
-    ),
-    Fractions2Lesson(
-      title: 'Recording Halves',
-      description: 'We can record halves using ½, the word "half", or by saying "equal" or "the same as".',
-      visual: Center(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('½ = half = equal = the same as', style: TextStyle(fontSize: 18, color: Color(0xFF7B2FF2))),
-          ],
-        ),
-      ),
-    ),
-    Fractions2Lesson(
-      title: 'Real-life Halves',
-      description: 'We use halves in real life: half a sandwich, half a jug of water, half of a group of apples.',
-      visual: Center(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.lunch_dining, color: Color(0xFF7B2FF2), size: 32),
-            const SizedBox(width: 12),
-            Icon(Icons.local_drink, color: Colors.blue, size: 32),
-            const SizedBox(width: 12),
-            Icon(Icons.apple, color: Colors.red, size: 32),
           ],
         ),
       ),
@@ -579,166 +871,289 @@ class _Fractions2ScreenState extends State<Fractions2Screen> with TickerProvider
   // --- GAME CONTENT ---
   List<Fractions2GameQuestion> get fractions2GameQuestions => [
     Fractions2GameQuestion(
-      question: 'Which shape is split into two equal halves?',
-      visual: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Option A (correct)
-          Column(
+      question: 'Look at the pizza. Which side shows half of it?',
+      visual: Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              margin: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange[100],
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.orange, width: 2),
+              ),
+              child: Stack(
+                children: [
+                  Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: 2,
+                      height: 120,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      width: 59,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.orange[300],
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(60),
+                          bottomLeft: Radius.circular(60),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      options: ['Left side', 'Right side', 'Both sides', 'Neither side'],
+      answer: 'Left side',
+    ),
+    Fractions2GameQuestion(
+      question: 'A jug of juice is poured into two glasses. How much juice is in each glass?',
+      visual: Center(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 40, height: 40,
+                width: 60,
+                height: 100,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Colors.blue[100],
+                  border: Border.all(color: Colors.blue, width: 2),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Row(
-                  children: [
-                    Container(width: 20, height: 40, color: Color(0xFF7B2FF2)),
-                    Container(width: 20, height: 40, color: Colors.transparent),
-                  ],
+                child: ClipRect(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.blue[400],
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(6),
+                              topRight: Radius.circular(6),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
-              const Text('A'),
+              SizedBox(width: 20),
+              Icon(Icons.arrow_forward, color: Color(0xFF7B2FF2), size: 24),
+              SizedBox(width: 20),
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.blue[100],
+                      border: Border.all(color: Colors.blue, width: 2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ClipRect(
+                      child: Column(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.blue[400],
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(6),
+                                  topRight: Radius.circular(6),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 1,
+                            child: Container(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Container(
+                    width: 40,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.blue[100],
+                      border: Border.all(color: Colors.blue, width: 2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ClipRect(
+                      child: Column(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.blue[400],
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(6),
+                                  topRight: Radius.circular(6),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 1,
+                            child: Container(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
-          const SizedBox(width: 16),
-          // Option B
-          Column(
+        ),
+      ),
+      options: ['One quarter', 'One half', 'Three quarters', 'All of it'],
+      answer: 'One half',
+    ),
+    Fractions2GameQuestion(
+      question: 'What time does this clock show?',
+      visual: Center(
+        child: Container(
+          width: 150,
+          height: 150,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            shape: BoxShape.circle,
+            border: Border.all(color: Color(0xFF7B2FF2), width: 2),
+          ),
+          child: Stack(
             children: [
-              Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Container(width: 25, height: 40, color: Color(0xFF7B2FF2)),
-                    Container(width: 15, height: 40, color: Colors.transparent),
-                  ],
+              Center(
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Color(0xFF7B2FF2),
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
-              const Text('B'),
-            ],
-          ),
-        ],
-      ),
-      options: ['A', 'B'],
-      answer: 'A',
-    ),
-    Fractions2GameQuestion(
-      question: 'How many apples in half the set?',
-      visual: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(8, (i) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          child: Icon(Icons.apple, color: Colors.red, size: 28),
-        )),
-      ),
-      options: ['2', '3', '4', '5'],
-      answer: '4',
-    ),
-    Fractions2GameQuestion(
-      question: 'Jamil needs ½ of these eggs for his cakes. How many eggs does he need?',
-      visual: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(6, (i) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          child: Icon(Icons.egg, color: Colors.brown, size: 28),
-        )),
-      ),
-      options: ['2', '3', '4', '6'],
-      answer: '3',
-    ),
-    Fractions2GameQuestion(
-      question: 'A farmer has 10 sheep and 2 fields. He puts ½ in each field. How many sheep in each field?',
-      visual: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(10, (i) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          child: Icon(Icons.pets, color: Colors.grey, size: 24),
-        )),
-      ),
-      options: ['2', '4', '5', '10'],
-      answer: '5',
-    ),
-    Fractions2GameQuestion(
-      question: 'Which of these is NOT a half?',
-      visual: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Option A (correct)
-          Column(
-            children: [
-              Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Container(width: 20, height: 40, color: Color(0xFF7B2FF2)),
-                    Container(width: 20, height: 40, color: Colors.transparent),
-                  ],
+              ...List.generate(12, (index) {
+                final angle = (index * 30) * 3.14159 / 180;
+                return Positioned(
+                  left: 75 + 65 * sin(angle) - 2,
+                  top: 75 - 65 * cos(angle) - 2,
+                  child: Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF7B2FF2),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                );
+              }),
+              Transform.rotate(
+                angle: 2 * 30 * 3.14159 / 180,
+                child: Container(
+                  width: 2,
+                  height: 40,
+                  color: Color(0xFF7B2FF2),
+                  margin: EdgeInsets.only(bottom: 40),
                 ),
               ),
-              const SizedBox(height: 4),
-              const Text('A'),
-            ],
-          ),
-          const SizedBox(width: 16),
-          // Option B (not a half)
-          Column(
-            children: [
-              Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Container(width: 30, height: 40, color: Color(0xFF7B2FF2)),
-                    Container(width: 10, height: 40, color: Colors.transparent),
-                  ],
+              Transform.rotate(
+                angle: 6 * 30 * 3.14159 / 180,
+                child: Container(
+                  width: 2,
+                  height: 60,
+                  color: Color(0xFF7B2FF2),
+                  margin: EdgeInsets.only(bottom: 60),
                 ),
               ),
-              const SizedBox(height: 4),
-              const Text('B'),
             ],
           ),
-        ],
+        ),
       ),
-      options: ['A', 'B'],
-      answer: 'B',
+      options: ['Half past 1', 'Half past 2', 'Half past 3', 'Half past 4'],
+      answer: 'Half past 2',
     ),
     Fractions2GameQuestion(
-      question: 'If you have 6 cookies and share them equally, how many does each person get?',
-      visual: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(6, (i) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          child: Icon(Icons.cookie, color: Colors.orange, size: 28),
-        )),
+      question: 'Half of these cookies are chocolate. How many chocolate cookies are there?',
+      visual: Center(
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          alignment: WrapAlignment.center,
+          children: [
+            ...List.generate(4, (index) => Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.brown[300],
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.brown, width: 2),
+              ),
+            )),
+            ...List.generate(4, (index) => Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.orange[100],
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.orange, width: 2),
+              ),
+            )),
+          ],
+        ),
       ),
-      options: ['2', '3', '4', '6'],
-      answer: '3',
+      options: ['2 cookies', '4 cookies', '6 cookies', '8 cookies'],
+      answer: '4 cookies',
     ),
     Fractions2GameQuestion(
-      question: 'Do these two halves make a whole?',
-      visual: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(width: 30, height: 40, color: Color(0xFF7B2FF2)),
-          Container(width: 30, height: 40, color: Colors.orange),
-        ],
+      question: 'What is half of 18 apples?',
+      visual: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: List.generate(18, (index) => Icon(
+                Icons.apple,
+                color: Color(0xFF7B2FF2),
+                size: 24,
+              )),
+            ),
+            SizedBox(height: 16),
+            Text(
+              '÷ 2 = ?',
+              style: TextStyle(
+                fontSize: 24,
+                color: Color(0xFF7B2FF2),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
-      options: ['Yes', 'No'],
-      answer: 'Yes',
+      options: ['7 apples', '8 apples', '9 apples', '10 apples'],
+      answer: '9 apples',
     ),
   ];
 }

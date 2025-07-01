@@ -58,61 +58,58 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
 
   List<FractionActivity> get activities => [
     FractionActivity(
-      title: 'Understanding Half',
-      description: 'Learn about the concept of half and how to represent it',
-      visual: _buildFractionVisual(1, 2, 'Half', gradient: [Colors.blue, Colors.cyan]),
-      instruction: 'A half means one part out of two equal parts',
+      title: 'What is a Half?',
+      description: 'A fraction is a part of a whole. When you cut something into two equal parts, each part is called a half.',
+      visual: _buildVisual('sandwich', [Colors.brown.shade200, Colors.brown.shade100]),
+      instruction: 'Look at how objects can be divided into two equal parts',
+      options: ['Half', 'Whole', 'Part', 'Equal'],
+      name: 'Half',
+      funFact: 'When you share something equally with one friend, you each get half!',
+    ),
+    FractionActivity(
+      title: 'Half in Real Life',
+      description: 'We use halves in many everyday situations:\n- Half of a sandwich\n- Half a jug of water\n- Half past on a clock\n- Half of a number',
+      visual: _buildVisual('clock', [Colors.purple.shade700, Colors.purple.shade200]),
+      instruction: 'Halves are all around us in daily life',
       options: ['Half', 'Third', 'Quarter', 'Fifth'],
       name: 'Half',
-      funFact: 'If you cut an apple into 2 equal pieces and take one, you have half an apple!',
+      funFact: 'Half past 4 means it\'s 4:30!',
     ),
     FractionActivity(
-      title: 'Understanding Thirds',
-      description: 'Explore the concept of thirds and their representation',
-      visual: _buildFractionVisual(1, 3, 'Third', gradient: [Colors.purple, Colors.deepPurpleAccent]),
-      instruction: 'A third means one part out of three equal parts',
-      options: ['Third', 'Half', 'Quarter', 'Fifth'],
-      name: 'Third',
-      funFact: 'If you share a chocolate bar with 2 friends, each gets a third!',
+      title: 'Coloring Halves',
+      description: 'We can show half by coloring one part of two equal parts. Both parts must be exactly the same size.',
+      visual: _buildVisual('shapes', [Colors.orange.shade800, Colors.orange.shade200]),
+      instruction: 'Look at how shapes can be divided into halves',
+      options: ['Equal parts', 'Different parts', 'Whole shape', 'Quarter parts'],
+      name: 'Equal parts',
+      funFact: 'Both halves of a shape must be exactly the same size!',
     ),
     FractionActivity(
-      title: 'Understanding Quarters',
-      description: 'Learn about quarters and how they divide a whole',
-      visual: _buildFractionVisual(1, 4, 'Quarter', gradient: [Colors.orange, Colors.deepOrange]),
-      instruction: 'A quarter means one part out of four equal parts',
-      options: ['Quarter', 'Half', 'Third', 'Fifth'],
-      name: 'Quarter',
-      funFact: 'A quarter of an hour is 15 minutes!',
+      title: 'Half of Numbers',
+      description: 'We can also find half of a number. Half of 10 is 5 because 5 + 5 = 10.',
+      visual: _buildVisual('numbers', [Colors.green.shade700, Colors.green.shade200]),
+      instruction: 'Half of a number means dividing it into two equal parts',
+      options: ['5', '2', '4', '6'],
+      name: '5',
+      funFact: 'To find half of an even number, divide it by 2!',
     ),
     FractionActivity(
-      title: 'Understanding Fifths',
-      description: 'Discover the concept of fifths and their visual representation',
-      visual: _buildFractionVisual(1, 5, 'Fifth', gradient: [Colors.green, Colors.lightGreen]),
-      instruction: 'A fifth means one part out of five equal parts',
-      options: ['Fifth', 'Half', 'Third', 'Quarter'],
-      name: 'Fifth',
-      funFact: 'If you have 5 candies and eat one, you ate a fifth!',
-    ),
-    FractionActivity(
-      title: 'Understanding Sixths',
-      description: 'Learn about sixths and how they divide a whole',
-      visual: _buildFractionVisual(1, 6, 'Sixth', gradient: [Colors.pink, Colors.redAccent]),
-      instruction: 'A sixth means one part out of six equal parts',
-      options: ['Sixth', 'Half', 'Third', 'Quarter', 'Fifth'],
-      name: 'Sixth',
-      funFact: 'If you cut a pizza into 6 slices and take one, you have a sixth!',
+      title: 'Making a Whole',
+      description: 'Two halves put together make a whole. For example, if you pour two half-full glasses of juice into a jug, you get a full jug!',
+      visual: _buildVisual('jug', [Colors.blue.shade600, Colors.blue.shade200]),
+      instruction: 'See how two halves combine to make one whole',
+      options: ['Whole', 'Half', 'Part', 'Quarter'],
+      name: 'Whole',
+      funFact: 'Two halves always make a whole!',
     ),
   ];
 
-  static Widget _buildFractionVisual(int numerator, int denominator, String name, {List<Color>? gradient}) {
+  static Widget _buildVisual(String type, List<Color> gradient) {
     return Container(
       width: 200,
       height: 120,
       decoration: BoxDecoration(
-        gradient: gradient != null
-            ? LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight)
-            : null,
-        color: gradient == null ? Colors.white : null,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -123,12 +120,7 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
         ],
       ),
       child: CustomPaint(
-        painter: BarFractionPainter(
-          numerator: numerator,
-          denominator: denominator,
-          name: name,
-          gradient: gradient ?? [Colors.blue, Colors.cyan],
-        ),
+        painter: ContentPainter(type: type, gradient: gradient),
       ),
     );
   }
@@ -237,10 +229,9 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
   void _showCompletionDialog() {
     final percentage = (score / shuffledActivities.length) * 100;
     final isPassed = percentage >= 50.0;
-
-    // Save game progress
+    
     SharedPreferenceService.saveGameProgress('fractions', score, shuffledActivities.length);
-
+    
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -266,7 +257,6 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header with Icon
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -282,8 +272,6 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
                 ),
               ),
               const SizedBox(height: 24),
-              
-              // Title
               Text(
                 isPassed ? 'Congratulations!' : 'Keep Practicing!',
                 style: TextStyle(
@@ -293,8 +281,6 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
                 ),
               ),
               const SizedBox(height: 16),
-              
-              // Score Display
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 decoration: BoxDecoration(
@@ -349,11 +335,9 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
                 ),
               ),
               const SizedBox(height: 24),
-              
-              // Message
               Text(
                 isPassed
-                    ? 'Great job! You\'ve mastered the fractions!'
+                    ? 'Great job! You\'ve mastered these fractions!'
                     : 'You\'re getting there! Practice makes perfect.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -363,20 +347,16 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
                 ),
               ),
               const SizedBox(height: 24),
-              
-              // Buttons
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                alignment: WrapAlignment.center,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.of(context).pop(); // Close dialog
-                      Navigator.of(context).pop(); // Return to home screen
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pop();
                     },
-                    icon: const Icon(Icons.home),
-                    label: const Text('Go to Home'),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Back'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
@@ -386,23 +366,22 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
                       ),
                     ),
                   ),
-                  if (isPassed)
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop(); // Close dialog
-                        _startGame(); // Start new game
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Play Again'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.secondary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _startGame();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Play Again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                  ),
                 ],
               ),
             ],
@@ -506,37 +485,44 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
                 ),
               ),
               const SizedBox(height: 20),
-              // Generic prompt instead of answer-revealing text
+              // Add question number
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Question ${currentQuestion + 1} of ${shuffledActivities.length}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Rest of game content
+              shuffledActivities[currentQuestion].visual,
+              const SizedBox(height: 20),
               Text(
-                'Which fraction is shown below?',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.secondary,
+                shuffledActivities[currentQuestion].instruction,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 20),
-              // Visual
-              Container(
-                height: 120,
-                width: double.infinity,
-                alignment: Alignment.center,
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  child: shuffledActivities[currentQuestion].visual,
-                ),
+              const SizedBox(height: 30),
+              // Options grid
+              GridView.count(
+                shrinkWrap: true,
+                crossAxisCount: 2,
+                childAspectRatio: 2.5,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                children: shuffledActivities[currentQuestion]
+                    .options
+                    .map((option) => _buildAnswerOption(option))
+                    .toList(),
               ),
-              const SizedBox(height: 24),
-              // Answer options
-              ...shuffledActivities[currentQuestion].options.map((option) {
-                final isSelected = selectedAnswer == option;
-                final isCorrect = showResult && option == shuffledActivities[currentQuestion].name;
-                final isIncorrect = showResult && isSelected && option != shuffledActivities[currentQuestion].name;
-                return _buildAnswerOption(option, isSelected, isCorrect, isIncorrect);
-              }).toList(),
-              const SizedBox(height: 20),
-              // No Next Question button
             ],
           ),
         ),
@@ -593,16 +579,6 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        activity.title,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -610,8 +586,16 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      activity.title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Text(
                       activity.description,
                       style: TextStyle(
@@ -619,83 +603,38 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
                         color: Colors.grey[600],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    // Visual centered
+                    const SizedBox(height: 16),
                     Center(child: activity.visual),
-                    const SizedBox(height: 24),
-                    // Instruction
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        activity.instruction,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    const SizedBox(height: 16),
+                    Text(
+                      activity.instruction,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    // Fun fact section
+                    const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.1),
+                        color: Colors.amber.shade50,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(
-                              color: Colors.amber,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.lightbulb,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
+                          Icon(Icons.lightbulb, color: Colors.amber[700]),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               activity.funFact,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontStyle: FontStyle.italic,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.amber[900],
                               ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Options section
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: activity.options.map((option) => Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          option,
-                          style: TextStyle(
-                            color: Theme.of(context).primaryColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      )).toList(),
                     ),
                   ],
                 ),
@@ -707,7 +646,10 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildAnswerOption(String option, bool isSelected, bool isCorrect, bool isIncorrect) {
+  Widget _buildAnswerOption(String option) {
+    final isSelected = selectedAnswer == option;
+    final isCorrect = showResult && option == shuffledActivities[currentQuestion].name;
+    final isIncorrect = showResult && isSelected && option != shuffledActivities[currentQuestion].name;
     Color backgroundColor;
     if (isCorrect) {
       backgroundColor = Colors.green.shade100;
@@ -791,73 +733,269 @@ class _FractionsScreenState extends State<FractionsScreen> with TickerProviderSt
   }
 }
 
-class BarFractionPainter extends CustomPainter {
-  final int numerator;
-  final int denominator;
-  final String name;
+class ContentPainter extends CustomPainter {
+  final String type;
   final List<Color> gradient;
 
-  BarFractionPainter({
-    required this.numerator,
-    required this.denominator,
-    required this.name,
-    required this.gradient,
-  });
+  ContentPainter({required this.type, required this.gradient});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double barHeight = size.height * 0.4;
-    final double barWidth = size.width * 0.8;
-    final double left = (size.width - barWidth) / 2;
-    final double top = (size.height - barHeight) / 2;
-    final double partWidth = barWidth / denominator;
+    switch (type) {
+      case 'sandwich':
+        _drawSandwich(canvas, size);
+        break;
+      case 'clock':
+        _drawClock(canvas, size);
+        break;
+      case 'shapes':
+        _drawShapes(canvas, size);
+        break;
+      case 'numbers':
+        _drawNumbers(canvas, size);
+        break;
+      case 'jug':
+        _drawJug(canvas, size);
+        break;
+    }
+  }
 
-    // Draw the bar background
-    final bgPaint = Paint()
-      ..color = Colors.grey.shade300
+  void _drawSandwich(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = gradient[0]
       ..style = PaintingStyle.fill;
-    final barRect = Rect.fromLTWH(left, top, barWidth, barHeight);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(barRect, const Radius.circular(16)),
-      bgPaint,
+
+    // Draw bread slices
+    final breadRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(20, 30, size.width - 40, 60),
+      const Radius.circular(10),
+    );
+    canvas.drawRRect(breadRect, paint);
+
+    // Draw filling
+    final fillingPaint = Paint()
+      ..color = gradient[1]
+      ..style = PaintingStyle.fill;
+    final fillingRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(25, 45, size.width - 50, 30),
+      const Radius.circular(5),
+    );
+    canvas.drawRRect(fillingRect, fillingPaint);
+
+    // Draw cutting line
+    final linePaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(
+      Offset(size.width / 2, 20),
+      Offset(size.width / 2, 100),
+      linePaint,
+    );
+  }
+
+  void _drawClock(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.purple.shade700
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    // Reduce clock radius to 25% of the smaller dimension
+    final radius = math.min(size.width, size.height) * 0.25;
+
+    // Draw clock face
+    canvas.drawCircle(center, radius, paint);
+
+    // Draw numbers with smaller font
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
     );
 
-    // Draw the filled parts
-    for (int i = 0; i < numerator; i++) {
-      final fillRect = Rect.fromLTWH(left + i * partWidth, top, partWidth, barHeight);
-      final fillPaint = Paint()
-        ..shader = LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ).createShader(fillRect)
-        ..style = PaintingStyle.fill;
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(fillRect, const Radius.circular(16)),
-        fillPaint,
+    for (int i = 1; i <= 12; i++) {
+      final angle = -math.pi / 2 + (i * 2 * math.pi / 12);
+      final offset = Offset(
+        center.dx + (radius - 10) * math.cos(angle),
+        center.dy + (radius - 10) * math.sin(angle),
+      );
+
+      textPainter.text = TextSpan(
+        text: i.toString(),
+        style: TextStyle(
+          fontSize: 10,
+          color: Colors.purple.shade700,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(
+          offset.dx - textPainter.width / 2,
+          offset.dy - textPainter.height / 2,
+        ),
       );
     }
 
-    // Draw the part dividers
-    final dividerPaint = Paint()
-      ..color = Colors.white
+    // Draw hands with adjusted thickness
+    final handPaint = Paint()
+      ..color = Colors.purple.shade700
       ..strokeWidth = 2;
-    for (int i = 1; i < denominator; i++) {
-      final dx = left + i * partWidth;
-      canvas.drawLine(
-        Offset(dx, top),
-        Offset(dx, top + barHeight),
-        dividerPaint,
+
+    // Hour hand
+    canvas.drawLine(
+      center,
+      Offset(
+        center.dx + radius * 0.4 * math.cos(-math.pi / 3),
+        center.dy + radius * 0.4 * math.sin(-math.pi / 3),
+      ),
+      handPaint,
+    );
+
+    // Minute hand
+    canvas.drawLine(
+      center,
+      Offset(center.dx, center.dy - radius * 0.6),
+      handPaint,
+    );
+
+    // Center dot
+    canvas.drawCircle(center, 3, Paint()..color = Colors.purple.shade700);
+  }
+
+  void _drawShapes(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    // Draw circle
+    final circleCenter = Offset(size.width * 0.3, size.height / 2);
+    paint.color = gradient[1];
+    canvas.drawCircle(circleCenter, 30, paint);
+    paint.color = gradient[0];
+    final circlePath = Path()
+      ..moveTo(circleCenter.dx, circleCenter.dy - 30)
+      ..arcTo(
+        Rect.fromCircle(center: circleCenter, radius: 30),
+        -math.pi / 2,
+        math.pi,
+        false,
+      );
+    canvas.drawPath(circlePath, paint);
+
+    // Draw square
+    final squareCenter = Offset(size.width * 0.7, size.height / 2);
+    paint.color = gradient[1];
+    canvas.drawRect(
+      Rect.fromCenter(center: squareCenter, width: 60, height: 60),
+      paint,
+    );
+    paint.color = gradient[0];
+    canvas.drawRect(
+      Rect.fromLTWH(squareCenter.dx - 30, squareCenter.dy - 30, 30, 60),
+      paint,
+    );
+  }
+
+  void _drawNumbers(Canvas canvas, Size size) {
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+
+    // Draw equation with better spacing and smaller font
+    final equation = TextSpan(
+      children: [
+        TextSpan(
+          text: '10',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.green.shade700,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const TextSpan(
+          text: ' ÷ 2 = ',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.black54,
+          ),
+        ),
+        TextSpan(
+          text: '5',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.green.shade700,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+    
+    textPainter.text = equation;
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        (size.width - textPainter.width) / 2,
+        size.height * 0.2,
+      ),
+    );
+
+    // Draw dots in a more compact and clearer arrangement
+    final dotRadius = 4.0;
+    final rowSpacing = 20.0;
+    final dotSpacing = 15.0;
+
+    // Calculate starting position to center the dots
+    final totalWidth = dotSpacing * 4; // 5 dots, 4 spaces
+    final startX = (size.width - totalWidth) / 2;
+    final startY = size.height * 0.5;
+
+    // Draw dividing line
+    final linePaint = Paint()
+      ..color = Colors.black26
+      ..strokeWidth = 1;
+
+    canvas.drawLine(
+      Offset(startX - 5, startY),
+      Offset(startX + totalWidth + 5, startY),
+      linePaint,
+    );
+
+    // Draw first row of dots (darker green)
+    final topDotPaint = Paint()..color = Colors.green.shade700;
+    for (int i = 0; i < 5; i++) {
+      canvas.drawCircle(
+        Offset(startX + (i * dotSpacing), startY - rowSpacing/2),
+        dotRadius,
+        topDotPaint,
       );
     }
 
-    // Draw the fraction text
+    // Draw second row of dots (lighter green)
+    final bottomDotPaint = Paint()..color = Colors.green.shade400;
+    for (int i = 0; i < 5; i++) {
+      canvas.drawCircle(
+        Offset(startX + (i * dotSpacing), startY + rowSpacing/2),
+        dotRadius,
+        bottomDotPaint,
+      );
+    }
+  }
+
+  void _drawJug(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.stroke..strokeWidth = 2;
+
+    // Draw first half-full glass
+    _drawGlass(canvas, Offset(size.width * 0.25, size.height * 0.5), size.width * 0.15, size.height * 0.4, gradient[1], true);
+
+    // Draw plus sign
     final textPainter = TextPainter(
-      text: TextSpan(
-        text: '$numerator/$denominator',
-        style: const TextStyle(
-          color: Colors.black,
+      text: const TextSpan(
+        text: '+',
+        style: TextStyle(
           fontSize: 24,
+          color: Colors.black54,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -867,12 +1005,45 @@ class BarFractionPainter extends CustomPainter {
     textPainter.paint(
       canvas,
       Offset(
-        size.width / 2 - textPainter.width / 2,
-        top + barHeight + 12,
+        (size.width - textPainter.width) / 2,
+        (size.height - textPainter.height) / 2,
       ),
     );
+
+    // Draw second half-full glass
+    _drawGlass(canvas, Offset(size.width * 0.75, size.height * 0.5), size.width * 0.15, size.height * 0.4, gradient[1], true);
+  }
+
+  void _drawGlass(Canvas canvas, Offset center, double width, double height, Color fillColor, bool halfFull) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = gradient[0];
+
+    // Draw glass outline
+    final glassPath = Path()
+      ..moveTo(center.dx - width / 2, center.dy - height / 2)
+      ..lineTo(center.dx - width / 3, center.dy + height / 2)
+      ..lineTo(center.dx + width / 3, center.dy + height / 2)
+      ..lineTo(center.dx + width / 2, center.dy - height / 2)
+      ..close();
+    canvas.drawPath(glassPath, paint);
+
+    // Fill the glass halfway
+    if (halfFull) {
+      final fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = fillColor;
+      final fillPath = Path()
+        ..moveTo(center.dx - width / 3, center.dy + height / 2)
+        ..lineTo(center.dx + width / 3, center.dy + height / 2)
+        ..lineTo(center.dx + width / 3, center.dy)
+        ..lineTo(center.dx - width / 3, center.dy)
+        ..close();
+      canvas.drawPath(fillPath, fillPaint);
+    }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 } 

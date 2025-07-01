@@ -3,18 +3,23 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:developer' as developer;
 import '../services/shared_preference_service.dart';
 import 'package:flutter/services.dart';
+import './geometry_chapter_screen.dart';
 
 class GeometryConcept {
   final String name;
   final Widget visual;
   final String description;
   final List<String> options;
+  final String section;
+  final String? exercise;
 
   GeometryConcept({
     required this.name,
     required this.visual,
     required this.description,
     required this.options,
+    required this.section,
+    this.exercise,
   });
 }
 
@@ -32,7 +37,7 @@ class GeometryScreen extends StatefulWidget {
 
 class _GeometryScreenState extends State<GeometryScreen> with TickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
-  bool isGameMode = false;  // Initialize as false to show lesson mode first
+  bool isGameMode = false;
   int score = 0;
   int currentQuestion = 0;
   String? selectedAnswer;
@@ -43,57 +48,101 @@ class _GeometryScreenState extends State<GeometryScreen> with TickerProviderStat
   late Animation<double> _animation;
   late AnimationController _optionAnimationController;
   late Animation<double> _optionScaleAnimation;
-  bool _isLoading = false;  // Set to false since we don't need to load game state initially
+  bool _isLoading = false;
+  String selectedSection = '3D Shapes';
 
   final List<GeometryConcept> concepts = [
+    // 3D Shapes Section
+    GeometryConcept(
+      name: 'Introduction to 3D Shapes',
+      visual: _build3DShapeVisual('intro'),
+      description: 'We live inside 3D shapes and have them all around us. You can hold a 3D shape in your hand.',
+      options: ['True', 'False'],
+      section: '3D Shapes',
+      exercise: 'Look around your room. Can you spot any 3D shapes?',
+    ),
+    GeometryConcept(
+      name: 'Parts of 3D Shapes',
+      visual: _build3DShapeVisual('parts'),
+      description: '3D shapes have faces and edges. Some have flat faces, others have curved surfaces.',
+      options: ['Face', 'Edge', 'Surface', 'All of these'],
+      section: '3D Shapes',
+      exercise: 'Touch a face and an edge on a 3D shape.',
+    ),
+    GeometryConcept(
+      name: 'Cube Properties',
+      visual: _build3DShapeVisual('cube'),
+      description: 'A cube has 6 faces and 12 edges. All faces are squares.',
+      options: ['6 faces', '8 faces', '12 faces', '4 faces'],
+      section: '3D Shapes',
+      exercise: 'Count the faces and edges of a cube.',
+    ),
+    GeometryConcept(
+      name: 'Cylinder Properties',
+      visual: _build3DShapeVisual('cylinder'),
+      description: 'A cylinder has 2 flat circular faces and 1 curved surface.',
+      options: ['Can roll', 'Cannot roll', 'Has corners', 'Is flat'],
+      section: '3D Shapes',
+      exercise: 'Will a cylinder roll? Try it!',
+    ),
+    GeometryConcept(
+      name: 'Sphere Properties',
+      visual: _build3DShapeVisual('sphere'),
+      description: 'A sphere has no faces or edges, only one curved surface.',
+      options: ['Has faces', 'Has edges', 'Can roll', 'Is flat'],
+      section: '3D Shapes',
+      exercise: 'Compare how a sphere and cylinder roll.',
+    ),
+    
+    // 2D Shapes Section
+    GeometryConcept(
+      name: 'Introduction to 2D Shapes',
+      visual: _build2DShapeVisual('intro'),
+      description: '2D shapes are flat. This makes them different from 3D shapes.',
+      options: ['True', 'False'],
+      section: '2D Shapes',
+      exercise: 'Can you hold a 2D shape in your hand?',
+    ),
     GeometryConcept(
       name: 'Circle',
-      visual: _buildGeometryVisual('⭕', 'Circle'),
-      description: 'A round shape with no corners',
-      options: ['Circle', 'Square', 'Triangle', 'Rectangle', 'Star'],
+      visual: _build2DShapeVisual('circle'),
+      description: 'A circle has one curved side and no corners.',
+      options: ['Curved sides', 'Straight sides', 'No sides', 'Four sides'],
+      section: '2D Shapes',
+      exercise: 'Draw a circle in the air with your finger.',
     ),
     GeometryConcept(
       name: 'Square',
-      visual: _buildGeometryVisual('⬛', 'Square'),
-      description: 'A shape with four equal sides',
-      options: ['Square', 'Circle', 'Triangle', 'Rectangle', 'Star'],
+      visual: _build2DShapeVisual('square'),
+      description: 'A square has 4 equal straight sides and 4 corners.',
+      options: ['4 sides', '3 sides', '5 sides', '6 sides'],
+      section: '2D Shapes',
+      exercise: 'Find something square in your room.',
     ),
     GeometryConcept(
       name: 'Triangle',
-      visual: _buildGeometryVisual('🔺', 'Triangle'),
-      description: 'A shape with three sides',
-      options: ['Triangle', 'Circle', 'Square', 'Rectangle', 'Star'],
+      visual: _build2DShapeVisual('triangle'),
+      description: 'A triangle has 3 straight sides and 3 corners.',
+      options: ['3 sides', '4 sides', '5 sides', '6 sides'],
+      section: '2D Shapes',
+      exercise: 'Draw a triangle using 3 straight lines.',
     ),
     GeometryConcept(
       name: 'Rectangle',
-      visual: _buildGeometryVisual('📏', 'Rectangle'),
-      description: 'A shape with four sides, two longer and two shorter',
-      options: ['Rectangle', 'Circle', 'Square', 'Triangle', 'Star'],
-    ),
-    GeometryConcept(
-      name: 'Star',
-      visual: _buildGeometryVisual('⭐', 'Star'),
-      description: 'A shape with five points',
-      options: ['Star', 'Circle', 'Square', 'Triangle', 'Rectangle'],
+      visual: _build2DShapeVisual('rectangle'),
+      description: 'A rectangle has 4 straight sides, with opposite sides equal.',
+      options: ['4 sides', '3 sides', '5 sides', '6 sides'],
+      section: '2D Shapes',
+      exercise: 'How is a rectangle different from a square?',
     ),
   ];
-
-  static Widget _buildGeometryVisual(String emoji, String shape) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          emoji,
-          style: const TextStyle(fontSize: 48),
-        ),
-      ],
-    );
-  }
 
   @override
   void initState() {
     super.initState();
     _initializeTts();
+    
+    // Initialize the main animation controller
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -104,6 +153,8 @@ class _GeometryScreenState extends State<GeometryScreen> with TickerProviderStat
         curve: Curves.easeInOut,
       ),
     );
+    
+    // Initialize the option animation controller
     _optionAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -114,19 +165,18 @@ class _GeometryScreenState extends State<GeometryScreen> with TickerProviderStat
         curve: Curves.easeInOut,
       ),
     );
+    
     if (widget.isGameMode) {
-      isGameMode = true;
-      score = 0;
-      currentQuestion = 0;
-      selectedAnswer = null;
-      showResult = false;
-      shuffledConcepts = List.from(concepts)..shuffle();
-      for (var concept in shuffledConcepts) {
-        concept.options.shuffle();
-      }
-      _animationController.reset();
-      _animationController.forward();
+      _startGame();
     }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _optionAnimationController.dispose();
+    flutterTts.stop();
+    super.dispose();
   }
 
   Future<void> _initializeTts() async {
@@ -146,7 +196,52 @@ class _GeometryScreenState extends State<GeometryScreen> with TickerProviderStat
       currentQuestion = 0;
       selectedAnswer = null;
       showResult = false;
-      shuffledConcepts = List.from(concepts)..shuffle();
+      
+      // Simplified questions for better understanding
+      final gameQuestions = [
+        GeometryConcept(
+          name: '6 faces',  // Changed from 'Cube Properties' to match the correct answer
+          visual: _build3DShapeVisual('cube'),
+          description: 'How many faces does a cube have?',  // Simplified question
+          options: ['6 faces', '4 faces', '8 faces', '12 faces'],
+          section: '3D Shapes',
+          exercise: null,
+        ),
+        GeometryConcept(
+          name: 'Can roll',  // Changed to match the correct answer
+          visual: _build3DShapeVisual('sphere'),
+          description: 'What can a sphere do?',  // Simplified question
+          options: ['Can roll', 'Has edges', 'Has corners', 'Is flat'],
+          section: '3D Shapes',
+          exercise: null,
+        ),
+        GeometryConcept(
+          name: 'Curved sides',  // Changed to match the correct answer
+          visual: _build2DShapeVisual('circle'),
+          description: 'What type of sides does a circle have?',  // Simplified question
+          options: ['Curved sides', 'Straight sides', 'No sides', 'Four sides'],
+          section: '2D Shapes',
+          exercise: null,
+        ),
+        GeometryConcept(
+          name: '4 sides',  // Changed to match the correct answer
+          visual: _build2DShapeVisual('square'),
+          description: 'How many sides does a square have?',  // Simplified question
+          options: ['4 sides', '3 sides', '5 sides', '6 sides'],
+          section: '2D Shapes',
+          exercise: null,
+        ),
+        GeometryConcept(
+          name: '3 sides',  // Changed to match the correct answer
+          visual: _build2DShapeVisual('triangle'),
+          description: 'How many sides does a triangle have?',  // Simplified question
+          options: ['3 sides', '4 sides', '5 sides', '6 sides'],
+          section: '2D Shapes',
+          exercise: null,
+        ),
+      ];
+      
+      shuffledConcepts = List.from(gameQuestions)..shuffle();
       for (var concept in shuffledConcepts) {
         concept.options.shuffle();
       }
@@ -162,20 +257,24 @@ class _GeometryScreenState extends State<GeometryScreen> with TickerProviderStat
       isCorrect = answer == shuffledConcepts[currentQuestion].name;
       if (isCorrect) {
         score++;
-        _speakText('Correct! ${shuffledConcepts[currentQuestion].description}');
+        _speakText("Correct!");
       } else {
-        _speakText('Try again! Think about the shape.');
+        _speakText("Try again!");
       }
     });
+
+    // Play the animation for the selected option
     _optionAnimationController.forward().then((_) {
       _optionAnimationController.reverse();
     });
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (currentQuestion < shuffledConcepts.length - 1) {
+
+    // Wait for 2 seconds before moving to next question
+    Future.delayed(const Duration(seconds: 2), () {
+      if (currentQuestion < 4) {
         setState(() {
-        currentQuestion++;
-        selectedAnswer = null;
-        showResult = false;
+          currentQuestion++;
+          selectedAnswer = null;
+          showResult = false;
         });
       } else {
         _showCompletionDialog();
@@ -184,11 +283,11 @@ class _GeometryScreenState extends State<GeometryScreen> with TickerProviderStat
   }
 
   void _showCompletionDialog() {
-    final percentage = (score / shuffledConcepts.length) * 100;
+    final percentage = (score / 5) * 100;
     final isPassed = percentage >= 50.0;
     
     // Save game progress
-    SharedPreferenceService.saveGameProgress('geometry', score, shuffledConcepts.length);
+    SharedPreferenceService.saveGameProgress('geometry', score, 5);
     
     showDialog(
       context: context,
@@ -213,9 +312,8 @@ class _GeometryScreenState extends State<GeometryScreen> with TickerProviderStat
             ],
           ),
           child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-              // Header with Icon
+            mainAxisSize: MainAxisSize.min,
+            children: [
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -226,12 +324,11 @@ class _GeometryScreenState extends State<GeometryScreen> with TickerProviderStat
                 ),
                 child: Icon(
                   isPassed ? Icons.emoji_events : Icons.school,
-                size: 48,
+                  size: 48,
                   color: isPassed ? Colors.green : Colors.orange,
                 ),
               ),
               const SizedBox(height: 24),
-              // Title
               Text(
                 isPassed ? 'Congratulations!' : 'Keep Practicing!',
                 style: TextStyle(
@@ -240,74 +337,48 @@ class _GeometryScreenState extends State<GeometryScreen> with TickerProviderStat
                   color: isPassed ? Colors.green : Colors.orange,
                 ),
               ),
-            const SizedBox(height: 16),
-              // Score Display
-            Text(
-                'Score: $score/${shuffledConcepts.length} (${percentage.toStringAsFixed(1)}%)',
+              const SizedBox(height: 16),
+              Text(
+                'Score: $score/5 (${percentage.toStringAsFixed(1)}%)',
                 style: const TextStyle(
                   fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  fontWeight: FontWeight.bold,
                 ),
+              ),
               const SizedBox(height: 16),
-              // Message
               Text(
                 isPassed
                   ? 'You\'ve completed the Geometry practice!'
                   : 'You\'re making progress! Keep practicing to improve.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 16),
-        ),
+              ),
               const SizedBox(height: 24),
-              // Buttons
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                alignment: WrapAlignment.center,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              Navigator.of(context).pop(); // Return to home screen
-            },
-                    icon: const Icon(Icons.home),
-                    label: const Text('Go to Home'),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      backgroundColor: Colors.purple,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                     ),
+                    child: const Text('Back', style: TextStyle(color: Colors.white)),
                   ),
-                  if (isPassed)
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop(); // Close dialog
-                        setState(() {
-                          score = 0;
-                          currentQuestion = 0;
-                          selectedAnswer = null;
-                          showResult = false;
-                          shuffledConcepts = List.from(concepts)..shuffle();
-                          for (var concept in shuffledConcepts) {
-                            concept.options.shuffle();
-                          }
-                        });
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Play Again'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.secondary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-          ),
-        ],
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _startGame();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    child: const Text('Play Again'),
+                  ),
+                ],
               ),
             ],
           ),
@@ -318,321 +389,685 @@ class _GeometryScreenState extends State<GeometryScreen> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Color(0xFF6A1B9A),
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF6A1B9A),
-      systemNavigationBarIconBrightness: Brightness.light,
-    ));
+    final filteredConcepts = concepts.where((c) => c.section == selectedSection).toList();
+    
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.isGameMode ? 'Geometry Game' : 'Learn Geometry',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        backgroundColor: Color(0xFF7B2FF2),
-        elevation: 0,
+        title: Text(widget.isGameMode ? 'Geometry Game' : 'Learning Geometry'),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: Colors.purple,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
+      body: Column(
+        children: [
+          // Section Toggle - Only show in lesson mode
+          if (!widget.isGameMode) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: selectedSection == '3D Shapes' ? Colors.purple : Colors.grey,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    onPressed: () => setState(() => selectedSection = '3D Shapes'),
+                    child: const Text('3D Shapes'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: selectedSection == '2D Shapes' ? Colors.purple : Colors.grey,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    onPressed: () => setState(() => selectedSection = '2D Shapes'),
+                    child: const Text('2D Shapes'),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Section Introduction
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                selectedSection == '3D Shapes'
+                  ? 'We live inside 3D shapes and have them all around us. Let\'s explore them!'
+                  : '2D shapes are flat and make patterns in our world. Let\'s discover them!',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.purple,
+                ),
+              ),
+            ),
+          ],
+          
+          // Content Area
+          Expanded(
+            child: widget.isGameMode 
+              ? _buildGameMode()
+              : _buildLessonMode(filteredConcepts),
           ),
-        ),
-        child: SafeArea(
-          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildGameMode() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxHeight < 600;
-        final isNarrowScreen = constraints.maxWidth < 360;
-        return Container(
-          width: double.infinity,
-          height: double.infinity,
-            padding: EdgeInsets.symmetric(
-              horizontal: isNarrowScreen ? 8.0 : 16.0,
-              vertical: isSmallScreen ? 8.0 : 16.0,
-            ),
+  Widget _buildLessonMode(List<GeometryConcept> filteredConcepts) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: filteredConcepts.length,
+      itemBuilder: (context, index) {
+        final concept = filteredConcepts[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Progress bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          'Question ${currentQuestion + 1}/${shuffledConcepts.length}',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 12 : 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 2,
-                        child: LinearProgressIndicator(
-                          value: (currentQuestion + 1) / shuffledConcepts.length,
-                          backgroundColor: Colors.grey.withOpacity(0.2),
-                          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                          minHeight: isSmallScreen ? 6 : 8,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 6 : 8,
-                          vertical: isSmallScreen ? 2 : 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          'Score: $score',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 10 : 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
+                Text(
+                  concept.name,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple,
                   ),
                 ),
-                SizedBox(height: isSmallScreen ? 12 : 20),
-                // Question
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'What shape is this?',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 16 : 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                SizedBox(height: isSmallScreen ? 12 : 20),
-                // Visual
-                Container(
-                  height: isSmallScreen ? 150 : 200,
-                  width: double.infinity,
-                  alignment: Alignment.center,
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    child: shuffledConcepts[currentQuestion].visual,
-                  ),
-                ),
-                SizedBox(height: isSmallScreen ? 16 : 24),
-                // Answer options
-                ...shuffledConcepts[currentQuestion].options.map((option) {
-                  final isSelected = selectedAnswer == option;
-                  final isCorrect = showResult && option == shuffledConcepts[currentQuestion].name;
-                  final isIncorrect = showResult && isSelected && option != shuffledConcepts[currentQuestion].name;
-                  
-                  Color backgroundColor;
-                  if (isCorrect) {
-                    backgroundColor = Colors.green.shade100;
-                  } else if (isIncorrect) {
-                    backgroundColor = Colors.red.shade100;
-                  } else if (isSelected) {
-                    backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.2);
-                  } else {
-                    backgroundColor = Colors.white;
-                  }
-
-                  Color borderColor;
-                  if (isCorrect) {
-                    borderColor = Colors.green;
-                  } else if (isIncorrect) {
-                    borderColor = Colors.red;
-                  } else if (isSelected) {
-                    borderColor = Theme.of(context).colorScheme.primary;
-                  } else {
-                    borderColor = Colors.grey.shade300;
-                  }
-
-                return AnimatedBuilder(
-                  animation: _optionAnimationController,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: isSelected ? _optionScaleAnimation.value : 1.0,
-                      child: child,
-                    );
-                  },
+                const SizedBox(height: 16),
+                Center(
                   child: Container(
-                    margin: EdgeInsets.only(
-                      bottom: isSmallScreen ? 6 : 8,
-                      left: isNarrowScreen ? 4 : 0,
-                      right: isNarrowScreen ? 4 : 0,
-                    ),
-                    child: Material(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      elevation: isSelected ? 4 : 1,
-                      child: InkWell(
-                        onTap: showResult ? null : () => _checkAnswer(option),
-                        borderRadius: BorderRadius.circular(12),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 350),
-                          curve: Curves.easeInOut,
-                          width: double.infinity,
-                          padding: EdgeInsets.symmetric(
-                            vertical: isSmallScreen ? 8 : 12,
-                            horizontal: isSmallScreen ? 12 : 16,
-                          ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: concept.visual,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  concept.description,
+                  style: const TextStyle(fontSize: 16),
+                ),
+                if (concept.exercise != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.purple[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.purple.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: backgroundColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: borderColor,
-                              width: 2,
-                            ),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Row(
+                          child: const Icon(Icons.extension, color: Colors.purple),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  option,
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 12 : 14,
-                                    fontWeight: isSelected || isCorrect ? FontWeight.bold : FontWeight.normal,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
+                              const Text(
+                                'Try This!',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.purple,
                                 ),
                               ),
-                              if (isCorrect)
-                                Icon(
-                                  Icons.check_circle,
-                                  color: Colors.green,
-                                  size: isSmallScreen ? 16 : 20,
-                                )
-                              else if (isIncorrect)
-                                Icon(
-                                  Icons.cancel,
-                                  color: Colors.red,
-                                  size: isSmallScreen ? 16 : 20,
+                              const SizedBox(height: 4),
+                              Text(
+                                concept.exercise!,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black87,
                                 ),
+                              ),
                             ],
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
-                  );
-                }).toList(),
-                SizedBox(height: isSmallScreen ? 8 : 16),
+                ],
               ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildLearningMode() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-          child: Text(
-            'Learn Geometry',
-            style: TextStyle(
-              fontSize: 24,
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
+  Widget _buildGameMode() {
+    if (currentQuestion >= 5) {
+      return _buildGameComplete();
+    }
+
+    final concept = shuffledConcepts[currentQuestion];
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Score and Progress Display
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.purple.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
-            textAlign: TextAlign.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Question ${currentQuestion + 1} of 5',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Score: $score',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Introduction
-                  Text(
-                    'Understanding Shapes',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+          const SizedBox(height: 16),
+          // Question Visual
+          Expanded(
+            flex: 3,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Let\'s learn about different geometric shapes:',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Geometry Concepts
-                  ...concepts.map((concept) {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              concept.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Center(
-                              child: concept.visual,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              concept.description,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-
-                  const SizedBox(height: 24),
                 ],
+              ),
+              child: concept.visual,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Question Text
+          Expanded(
+            flex: 1,
+            child: Center(
+              child: Text(
+                concept.description,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          // Answer Options
+          Expanded(
+            flex: 4,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: concept.options.map((option) {
+                final color = _getOptionColor(option);
+                return AnimatedBuilder(
+                  animation: _optionScaleAnimation,
+                  builder: (context, child) => Transform.scale(
+                    scale: selectedAnswer == option ? _optionScaleAnimation.value : 1.0,
+                    child: child,
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: showResult ? null : () => _checkAnswer(option),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: color,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        option,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  @override
-  void dispose() {
-    flutterTts.stop();
-    _animationController.dispose();
-    _optionAnimationController.dispose();
-    super.dispose();
+  Widget _buildGameComplete() {
+    final percentage = (score / 5) * 100;
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'Game Complete!',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Score: $score/5',
+            style: const TextStyle(fontSize: 20),
+          ),
+          Text(
+            '${percentage.toStringAsFixed(1)}%',
+            style: const TextStyle(fontSize: 48, color: Colors.purple),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                ),
+                child: const Text('Back', style: TextStyle(color: Colors.white)),
+              ),
+              const SizedBox(width: 16),
+              ElevatedButton(
+                onPressed: _startGame,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                ),
+                child: const Text('Play Again'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
+
+  Color _getOptionColor(String option) {
+    if (!showResult) {
+      return Colors.purple;
+    }
+    
+    // If this is the selected answer
+    if (option == selectedAnswer) {
+      // Show green for correct, red for incorrect
+      return isCorrect ? Colors.green : Colors.red;
+    }
+    
+    // If user selected wrong answer, highlight the correct one
+    if (!isCorrect && option == shuffledConcepts[currentQuestion].name) {
+      return Colors.green;
+    }
+    
+    // Other options should be dimmed
+    return Colors.grey.withOpacity(0.5);
+  }
+
+  static Widget _build3DShapeVisual(String type) {
+    return Container(
+      width: 200,
+      height: 200,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.purple[50],
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: CustomPaint(
+        painter: ThreeDShapePainter(type),
+      ),
+    );
+  }
+
+  static Widget _build2DShapeVisual(String type) {
+    return Container(
+      width: 200,
+      height: 200,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.purple[50],
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: CustomPaint(
+        painter: TwoDShapePainter(type),
+      ),
+    );
+  }
+}
+
+class ThreeDShapePainter extends CustomPainter {
+  final String type;
+  
+  ThreeDShapePainter(this.type);
+  
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.purple
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    switch (type) {
+      case 'cube':
+        _drawCube(canvas, size, paint);
+        break;
+      case 'cylinder':
+        _drawCylinder(canvas, size, paint);
+        break;
+      case 'sphere':
+        _drawSphere(canvas, size, paint);
+        break;
+      case 'intro':
+        _drawIntro3D(canvas, size, paint);
+        break;
+      case 'parts':
+        _drawParts3D(canvas, size, paint);
+        break;
+    }
+  }
+
+  void _drawCube(Canvas canvas, Size size, Paint paint) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final side = size.width * 0.4;
+    
+    // Front face
+    final frontPath = Path()
+      ..moveTo(center.dx - side/2, center.dy - side/2)
+      ..lineTo(center.dx + side/2, center.dy - side/2)
+      ..lineTo(center.dx + side/2, center.dy + side/2)
+      ..lineTo(center.dx - side/2, center.dy + side/2)
+      ..close();
+    
+    // Back face
+    final backPath = Path()
+      ..moveTo(center.dx - side/4, center.dy - side/1.5)
+      ..lineTo(center.dx + side/1.5, center.dy - side/1.5)
+      ..lineTo(center.dx + side/1.5, center.dy + side/4)
+      ..lineTo(center.dx - side/4, center.dy + side/4)
+      ..close();
+    
+    // Connecting lines
+    final connectPath = Path()
+      ..moveTo(center.dx - side/2, center.dy - side/2)
+      ..lineTo(center.dx - side/4, center.dy - side/1.5)
+      ..moveTo(center.dx + side/2, center.dy - side/2)
+      ..lineTo(center.dx + side/1.5, center.dy - side/1.5)
+      ..moveTo(center.dx + side/2, center.dy + side/2)
+      ..lineTo(center.dx + side/1.5, center.dy + side/4)
+      ..moveTo(center.dx - side/2, center.dy + side/2)
+      ..lineTo(center.dx - side/4, center.dy + side/4);
+    
+    canvas.drawPath(frontPath, paint);
+    canvas.drawPath(backPath, paint);
+    canvas.drawPath(connectPath, paint);
+  }
+
+  void _drawCylinder(Canvas canvas, Size size, Paint paint) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width * 0.2;
+    final height = size.height * 0.4;
+    
+    // Top ellipse
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(0, -height/2),
+        width: radius * 2,
+        height: radius,
+      ),
+      paint,
+    );
+    
+    // Bottom ellipse
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(0, height/2),
+        width: radius * 2,
+        height: radius,
+      ),
+      paint,
+    );
+    
+    // Side lines
+    canvas.drawLine(
+      center.translate(-radius, -height/2),
+      center.translate(-radius, height/2),
+      paint,
+    );
+    canvas.drawLine(
+      center.translate(radius, -height/2),
+      center.translate(radius, height/2),
+      paint,
+    );
+  }
+
+  void _drawSphere(Canvas canvas, Size size, Paint paint) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width * 0.3;
+    
+    // Main circle
+    canvas.drawCircle(center, radius, paint);
+    
+    // Ellipses for 3D effect
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center,
+        width: radius * 2,
+        height: radius,
+      ),
+      paint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center,
+        width: radius,
+        height: radius * 2,
+      ),
+      paint,
+    );
+  }
+
+  void _drawIntro3D(Canvas canvas, Size size, Paint paint) {
+    // Draw a simple house-like shape to demonstrate 3D
+    final center = Offset(size.width / 2, size.height / 2);
+    final width = size.width * 0.4;
+    final height = size.height * 0.4;
+    
+    // Front face
+    final frontPath = Path()
+      ..moveTo(center.dx - width/2, center.dy + height/2)
+      ..lineTo(center.dx - width/2, center.dy - height/2)
+      ..lineTo(center.dx, center.dy - height)
+      ..lineTo(center.dx + width/2, center.dy - height/2)
+      ..lineTo(center.dx + width/2, center.dy + height/2)
+      ..close();
+    
+    canvas.drawPath(frontPath, paint);
+    
+    // Side face
+    final sidePath = Path()
+      ..moveTo(center.dx + width/2, center.dy - height/2)
+      ..lineTo(center.dx + width, center.dy - height/3)
+      ..lineTo(center.dx + width, center.dy + height/1.5)
+      ..lineTo(center.dx + width/2, center.dy + height/2);
+    
+    canvas.drawPath(sidePath, paint);
+    
+    // Roof side
+    canvas.drawLine(
+      center.translate(0, -height),
+      center.translate(width/2, -height/3),
+      paint,
+    );
+  }
+
+  void _drawParts3D(Canvas canvas, Size size, Paint paint) {
+    // Draw a cube with labeled parts
+    _drawCube(canvas, size, paint);
+    
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      text: const TextSpan(
+        text: 'Face',
+        style: TextStyle(
+          color: Colors.purple,
+          fontSize: 12,
+        ),
+      ),
+    );
+    
+    textPainter.layout();
+    textPainter.paint(canvas, Offset(size.width * 0.7, size.height * 0.3));
+    
+    textPainter.text = const TextSpan(
+      text: 'Edge',
+      style: TextStyle(
+        color: Colors.purple,
+        fontSize: 12,
+      ),
+    );
+    
+    textPainter.layout();
+    textPainter.paint(canvas, Offset(size.width * 0.3, size.height * 0.7));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class TwoDShapePainter extends CustomPainter {
+  final String type;
+  
+  TwoDShapePainter(this.type);
+  
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.purple
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    switch (type) {
+      case 'circle':
+        _drawCircle(canvas, size, paint);
+        break;
+      case 'square':
+        _drawSquare(canvas, size, paint);
+        break;
+      case 'triangle':
+        _drawTriangle(canvas, size, paint);
+        break;
+      case 'rectangle':
+        _drawRectangle(canvas, size, paint);
+        break;
+      case 'intro':
+        _drawIntro2D(canvas, size, paint);
+        break;
+    }
+  }
+
+  void _drawCircle(Canvas canvas, Size size, Paint paint) {
+    final center = Offset(size.width / 2, size.height / 2);
+    canvas.drawCircle(center, size.width * 0.3, paint);
+  }
+
+  void _drawSquare(Canvas canvas, Size size, Paint paint) {
+    final side = size.width * 0.6;
+    final left = (size.width - side) / 2;
+    final top = (size.height - side) / 2;
+    
+    canvas.drawRect(
+      Rect.fromLTWH(left, top, side, side),
+      paint,
+    );
+  }
+
+  void _drawTriangle(Canvas canvas, Size size, Paint paint) {
+    final path = Path()
+      ..moveTo(size.width / 2, size.height * 0.2)
+      ..lineTo(size.width * 0.2, size.height * 0.8)
+      ..lineTo(size.width * 0.8, size.height * 0.8)
+      ..close();
+    
+    canvas.drawPath(path, paint);
+  }
+
+  void _drawRectangle(Canvas canvas, Size size, Paint paint) {
+    final width = size.width * 0.7;
+    final height = size.height * 0.4;
+    final left = (size.width - width) / 2;
+    final top = (size.height - height) / 2;
+    
+    canvas.drawRect(
+      Rect.fromLTWH(left, top, width, height),
+      paint,
+    );
+  }
+
+  void _drawIntro2D(Canvas canvas, Size size, Paint paint) {
+    // Draw multiple 2D shapes to demonstrate flatness
+    _drawCircle(canvas, Size(size.width * 0.4, size.height * 0.4), paint);
+    _drawSquare(canvas, Size(size.width * 0.4, size.height * 0.4), paint);
+    _drawTriangle(canvas, Size(size.width * 0.4, size.height * 0.4), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 } 

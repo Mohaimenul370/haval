@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:developer' as developer;
 import '../services/preference_service.dart';
-import '../services/game_progress_service.dart';
+import '../services/shared_preference_service.dart';
 
 class Number {
   final int value;
@@ -195,28 +195,189 @@ class _NumbersScreenState extends State<NumbersScreen> with SingleTickerProvider
       } else {
         _speakText('Oops! Try again! Think about the number');
       }
+    });
 
-      // Save score if this is the last question
-      if (currentQuestion == shuffledNumbers.length - 1) {
-        GameProgressService.saveGameProgress('numbers', score, shuffledNumbers.length);
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        if (currentQuestion < shuffledNumbers.length - 1) {
+          setState(() {
+            currentQuestion++;
+            selectedAnswer = null;
+            showResult = false;
+            _animationController.reset();
+            _animationController.forward();
+          });
+          _speakText('Great job! Let\'s try another one!');
+        } else {
+          _showCompletionDialog();
+        }
       }
     });
   }
 
-  void _nextQuestion() {
-    setState(() {
-      if (currentQuestion < shuffledNumbers.length - 1) {
-        currentQuestion++;
-        selectedAnswer = null;
-        showResult = false;
-        _animationController.reset();
-        _animationController.forward();
-        _speakText('Great job! Let\'s try another one!');
-      } else {
-        isGameMode = false;
-        _speakText('Wow! You finished the game! You got $score out of ${shuffledNumbers.length} correct! You\'re amazing!');
-      }
-    });
+  void _showCompletionDialog() {
+    final percentage = (score / shuffledNumbers.length) * 100;
+    final isPassed = percentage >= 50.0;
+    
+    SharedPreferenceService.saveGameProgress('numbers', score, shuffledNumbers.length);
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isPassed 
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isPassed ? Icons.emoji_events : Icons.school,
+                  size: 48,
+                  color: isPassed ? Colors.green : Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                isPassed ? 'Congratulations!' : 'Keep Practicing!',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: isPassed ? Colors.green : Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Your Score',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$score',
+                          style: TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        Text(
+                          ' / ${shuffledNumbers.length}',
+                          style: TextStyle(
+                            fontSize: 24,
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${percentage.toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                isPassed
+                    ? 'Great job! You\'ve mastered these numbers!'
+                    : 'You\'re getting there! Practice makes perfect.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[700],
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Back'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _startGame();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Play Again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -340,7 +501,7 @@ class _NumbersScreenState extends State<NumbersScreen> with SingleTickerProvider
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: ElevatedButton(
-                  onPressed: _nextQuestion,
+                  onPressed: () => _checkAnswer(shuffledNumbers[currentQuestion].value.toString()),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,

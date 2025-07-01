@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../services/game_progress_service.dart';
+import '../services/shared_preference_service.dart';
+import '../widgets/lock_message_dialog.dart';
 
 class MathProblem {
   final String question;
@@ -41,6 +43,12 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
   late AnimationController _answerAnimationController;
   late Animation<double> _answerAnimation;
   Color _answerColor = Colors.transparent;
+  final Map<String, double> _gameScores = {};
+  final Map<String, bool> _gameCompleted = {};
+  double _mathPlayPercentage = 0.0;
+  bool _canStartPractice = false;
+  bool _hasShownDialog = false;
+  bool _isLoading = true;
 
   final List<MathProblem> problems = [
     MathProblem(
@@ -259,38 +267,50 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _initializeAnimations();
     _initializeTts();
+    // Show dialog immediately after screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadGameScores();
+    });
+  }
+
+  void _initializeAnimations() {
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
     );
+
     _resultAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    _resultAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _resultAnimationController,
-        curve: Curves.easeOutBack,
-      ),
+    _resultAnimation = CurvedAnimation(
+      parent: _resultAnimationController,
+      curve: Curves.easeInOut,
     );
+
     _answerAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _answerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _answerAnimationController,
-        curve: Curves.easeInOut,
-      ),
+    _answerAnimation = CurvedAnimation(
+      parent: _answerAnimationController,
+      curve: Curves.easeInOut,
     );
-    _startGame();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _resultAnimationController.dispose();
+    _answerAnimationController.dispose();
+    flutterTts.stop();
+    super.dispose();
   }
 
   Future<void> _initializeTts() async {
@@ -301,6 +321,63 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
 
   Future<void> _speakText(String text) async {
     await flutterTts.speak(text);
+  }
+
+  Future<void> _loadGameScores() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    await SharedPreferenceService.initialize();
+    setState(() {
+      _gameScores.clear();
+      _gameCompleted.clear();
+
+      // Load scores for each chapter
+      for (var chapter in chapters) {
+        final route = chapter['route'].toString().substring(1);
+        final score = SharedPreferenceService.getGamePercentage(route);
+        final completed = SharedPreferenceService.isGameCompleted(route);
+        _gameScores[route] = score;
+        _gameCompleted[route] = completed;
+      }
+
+      // Calculate Math Play percentage
+      int completedChapters = 0;
+      for (var entry in _gameScores.entries) {
+        if (_gameCompleted[entry.key] == true || entry.value >= 50.0) {
+          completedChapters++;
+        }
+      }
+      _mathPlayPercentage = (completedChapters / 15) * 100;
+      _canStartPractice = _mathPlayPercentage >= 100;
+      _isLoading = false;
+    });
+
+    // Always show the dialog first, regardless of progress
+    if (!_hasShownDialog && mounted) {
+      _hasShownDialog = true;
+      await showLockMessageDialog(
+        context,
+        _mathPlayPercentage,
+        _gameScores,
+        _gameCompleted,
+        isFromMathPlay: true,
+      );
+      
+      // After dialog is closed, handle navigation
+      if (mounted) {
+        if (!_canStartPractice) {
+          // If not enough progress, navigate back to previous screen
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+        } else {
+          // If enough progress, start the game
+          _startGame();
+        }
+      }
+    }
   }
 
   void _startGame() {
@@ -512,31 +589,39 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Math Play Time'),
-        backgroundColor: const Color(0xFF6A1B9A),
-        foregroundColor: Colors.white,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.3),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-            ],
+    return WillPopScope(
+      onWillPop: () async {
+        // Just return true to allow normal back navigation
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: const Text(
+            'Math Practice',
+            style: TextStyle(color: Colors.black),
           ),
         ),
-        child: SafeArea(
-          child: showFinalResults ? _buildFinalResults() : _buildGameScreen(),
+        body: SafeArea(
+          child: _isLoading 
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
+            : _canStartPractice 
+              ? _buildGameContent() 
+              : const SizedBox(), // Hide content while dialog is showing
         ),
       ),
     );
   }
 
-  Widget _buildGameScreen() {
+  Widget _buildGameContent() {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -672,77 +757,23 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
       ),
     );
   }
+}
 
-  Widget _buildFinalResults() {
-    return Center(
-      child: ScaleTransition(
-        scale: _resultAnimation,
-        child: Container(
-          margin: const EdgeInsets.all(20),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Game Over!',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Your Score: $score/${shuffledProblems.length}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                _getResultMessage(),
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: _restartGame,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                ),
-                child: const Text(
-                  'Play Again',
-                  style: TextStyle(fontSize: 16),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+final List<Map<String, dynamic>> chapters = [
+  {'title': 'Numbers to 10', 'route': '/numbers_to_10'},
+  {'title': 'Numbers to 20', 'route': '/numbers_to_20'},
+  {'title': 'Shapes', 'route': '/shapes'},
+  {'title': 'Fractions', 'route': '/fractions'},
+  {'title': 'Fractions 2', 'route': '/fractions_2'},
+  {'title': 'Geometry', 'route': '/geometry'},
+  {'title': 'Geometry 2', 'route': '/geometry_2'},
+  {'title': 'Measures', 'route': '/measures'},
+  {'title': 'Measures 2', 'route': '/measures_2'},
+  {'title': 'Positions', 'route': '/positions'},
+  {'title': 'Statistics', 'route': '/statistics'},
+  {'title': 'Time', 'route': '/time'},
+  {'title': 'Statistics 2', 'route': '/statistics_2'},
+  {'title': 'Time 2', 'route': '/time_2'},
+  {'title': 'Position Patterns 2', 'route': '/position_patterns_2'},
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _resultAnimationController.dispose();
-    _answerAnimationController.dispose();
-    flutterTts.stop();
-    super.dispose();
-  }
-} 
+]; 

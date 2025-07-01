@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'home_screen.dart';
 import 'measures_screen.dart';
-import 'dart:developer' as developer;
+import '../main.dart';
 
 class MeasuresChapterScreen extends StatelessWidget {
   const MeasuresChapterScreen({super.key});
@@ -23,14 +24,15 @@ class MeasuresChapterScreen extends StatelessWidget {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const HomeScreen(),
+              ),
+            );
+          },
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(

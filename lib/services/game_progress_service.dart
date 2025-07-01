@@ -7,8 +7,8 @@ class GameProgressService {
   static const String _completedPrefix = 'game_completed_';
   static final List<String> requiredGames = [
     'fractions',
+    'numbers_to_10',
     'numbers_to_20',
-    'numbers',
     'shapes',
     'fractions_2',
     'measures',

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'home_screen.dart';
+import '../main.dart';
 
 class Time2ChapterScreen extends StatelessWidget {
   const Time2ChapterScreen({super.key});
@@ -22,14 +24,8 @@ class Time2ChapterScreen extends StatelessWidget {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomeScreen())),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(

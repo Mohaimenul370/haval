@@ -337,11 +337,11 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
       }
       // Add delay for animation/highlight
       if (currentQuestion < shuffledConcepts.length - 1) {
-        Future.delayed(const Duration(milliseconds: 900), () {
+        Future.delayed(const Duration(milliseconds: 1000), () {
           _nextQuestion();
         });
       } else {
-        Future.delayed(const Duration(milliseconds: 1200), () {
+        Future.delayed(const Duration(milliseconds: 1000), () {
           _showCompletionDialog();
         });
       }
@@ -364,137 +364,170 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
   void _showCompletionDialog() {
     final percentage = (score / shuffledConcepts.length) * 100;
     final isPassed = percentage >= 50.0;
-    // Always save progress here
-    developer.log('Saving game progress for positions_2: score=$score, total=${shuffledConcepts.length}, percentage=$percentage');
+    
+    // Save game progress
     SharedPreferenceService.saveGameProgress('positions_2', score, shuffledConcepts.length);
+    
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-              // Header with Icon
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isPassed 
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.orange.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isPassed ? Icons.emoji_events : Icons.school,
-                size: 48,
-                  color: isPassed ? Colors.green : Colors.orange,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Title
-            Text(
-                isPassed ? 'Congratulations!' : 'Keep Practicing!',
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Congratulations!',
                   style: TextStyle(
-                  fontSize: 28,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
-                  color: isPassed ? Colors.green : Colors.orange,
+                    color: Color(0xFF7B2FF2),
                   ),
                 ),
-              const SizedBox(height: 16),
-              // Score Display
-              Text(
-                'Score: $score/${shuffledConcepts.length} (${percentage.toStringAsFixed(1)}%)',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-        ),
-              ),
-              const SizedBox(height: 16),
-              // Message
-              Text(
-                isPassed
-                  ? 'You\'ve completed the Positions-2 practice!'
-                  : 'You\'re making progress! Keep practicing to improve.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 24),
-              // Buttons
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                alignment: WrapAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-            onPressed: () {
-                      Navigator.of(context).pop(); // Close dialog
-                      Navigator.of(context).pop(); // Return to home screen
-                    },
-                    icon: const Icon(Icons.home),
-                    label: const Text('Main Menu'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 20),
+                Text(
+                  'You scored $score out of ${shuffledConcepts.length}!',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF7B2FF2),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text(
+                        'Back',
+                        style: TextStyle(color: Colors.white),
                       ),
                     ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close dialog
-              setState(() {
-                        isGameMode = true;
-                score = 0;
-                currentQuestion = 0;
-                selectedAnswer = null;
-                showResult = false;
-                        shuffledConcepts = List.from(concepts)..shuffle();
-                        for (var concept in shuffledConcepts) {
-                          concept.options.shuffle();
-                        }
-              });
-            },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Play Again'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.secondary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF7B2FF2),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _startGame();
+                      },
+                      child: const Text(
+                        'Play Again',
+                        style: TextStyle(color: Colors.white),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isGameMode) {
+      return _buildGameModeScreen();
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF7B2FF2),
+        title: Text(
+          isGameMode ? 'Position Patterns 2' : 'Lesson Mode',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        centerTitle: true,
+        elevation: 0,
+      ),
+      body: isGameMode ? _buildGameMode() : _buildLessonMode(),
+    );
+  }
+
+  Widget _buildLessonMode() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: concepts.length,
+      itemBuilder: (context, index) {
+        final concept = concepts[index];
+        return Card(
+          elevation: 4,
+          margin: const EdgeInsets.only(bottom: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: InkWell(
+            onTap: () => _speakText('${concept.name}. ${concept.description}'),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    concept.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF7B2FF2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Center(child: concept.visual),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Description:',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    concept.description,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGameModeScreen() {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -513,12 +546,6 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Color(0xFF7B2FF2),
           statusBarIconBrightness: Brightness.light,
@@ -526,86 +553,19 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
           systemNavigationBarColor: Color(0xFF7B2FF2),
           systemNavigationBarIconBrightness: Brightness.light,
         ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF7B2FF2), Color(0xFFf357a8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
       ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
+            colors: [Color(0xFF7B2FF2), Color(0xFFf357a8)],
           ),
         ),
         child: SafeArea(
-          child: widget.isGameMode ? _buildGameMode() : _buildLearningMode(),
+          child: _buildGameMode(),
         ),
       ),
-    );
-  }
-
-  Widget _buildLearningMode() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-          child: Text(
-            'Learn Position Patterns',
-            style: const TextStyle(
-              fontSize: 24,
-              color: Color(0xFF7B2FF2),
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: concepts.map((concept) {
-                    return Card(
-                    color: Colors.white,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              concept.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              color: Color(0xFF7B2FF2),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Center(child: concept.visual),
-                          const SizedBox(height: 12),
-                          Text(
-                            concept.description,
-                            style: const TextStyle(fontSize: 16, color: Color(0xFF7B2FF2)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -616,139 +576,124 @@ class _PositionPatterns2ScreenState extends State<PositionPatterns2Screen> with 
     return Container(
       width: double.infinity,
       height: double.infinity,
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Progress bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      'Question ${currentQuestion + 1}/${shuffledConcepts.length}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFF3EFFF), Color(0xFFE3F0FF)],
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Question ${currentQuestion + 1} of ${shuffledConcepts.length}',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF7B2FF2),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: LinearProgressIndicator(
-                      value: (currentQuestion + 1) / shuffledConcepts.length,
-                      backgroundColor: Colors.grey.withOpacity(0.2),
-                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                      minHeight: 8,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      'Score: $score',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Question
-            Text(
-              'What is this position pattern?',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.secondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            // Visual
-            Container(
-              height: 100,
-              width: double.infinity,
-              alignment: Alignment.center,
-            child: Center(
-                child: concept.visual,
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Answer options
-            ...options.map((option) {
-              final isSelected = selectedAnswer == option;
-            final isCorrectOption = showResult && option == concept.example;
-            final isIncorrect = showResult && isSelected && !isCorrect;
-              
-              Color backgroundColor;
-            if (isCorrectOption) {
-              backgroundColor = Colors.green.withOpacity(0.9);
-              } else if (isIncorrect) {
-              backgroundColor = Colors.red.withOpacity(0.9);
-              } else if (isSelected) {
-              backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.9);
-              } else {
-              backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.7);
-              }
-
-              return ScaleTransition(
-              scale: (isSelected && showResult) ? _answerScaleAnimation : const AlwaysStoppedAnimation(1.0),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                  margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(12),
                 ),
-                  child: Material(
-                    borderRadius: BorderRadius.circular(12),
-                    elevation: isSelected ? 4 : 1,
-                  color: Colors.transparent,
-                    child: InkWell(
-                      onTap: showResult ? null : () => _checkAnswer(option),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                option,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                const SizedBox(height: 12),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  child: LinearProgressIndicator(
+                    value: (currentQuestion + 1) / shuffledConcepts.length,
+                    backgroundColor: Colors.grey.withOpacity(0.2),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF7B2FF2)),
+                    minHeight: 8,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'What is this position pattern?',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Visual
+                Container(
+                  height: 100,
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  child: Center(
+                    child: concept.visual,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Answer options
+                ...options.map((option) {
+                  final isSelected = selectedAnswer == option;
+                  final isCorrectOption = showResult && option == concept.example;
+                  final isIncorrect = showResult && isSelected && !isCorrect;
+                  
+                  Color backgroundColor;
+                  if (isCorrectOption) {
+                    backgroundColor = Colors.green.withOpacity(0.9);
+                  } else if (isIncorrect) {
+                    backgroundColor = Colors.red.withOpacity(0.9);
+                  } else if (isSelected) {
+                    backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.9);
+                  } else {
+                    backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.7);
+                  }
+
+                  return ScaleTransition(
+                    scale: (isSelected && showResult) ? _answerScaleAnimation : const AlwaysStoppedAnimation(1.0),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      margin: EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: backgroundColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Material(
+                        borderRadius: BorderRadius.circular(12),
+                        elevation: isSelected ? 4 : 1,
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: showResult ? null : () => _checkAnswer(option),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    option,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
-                              textAlign: TextAlign.center,
-                              ),
+                                if (isCorrectOption)
+                                  const Icon(Icons.check_circle, color: Colors.white, size: 24)
+                                else if (isIncorrect)
+                                  const Icon(Icons.cancel, color: Colors.white, size: 24),
+                              ],
                             ),
-                          if (isCorrectOption)
-                            const Icon(Icons.check_circle, color: Colors.white, size: 24)
-                            else if (isIncorrect)
-                            const Icon(Icons.cancel, color: Colors.white, size: 24),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
         ],
       ),
     );
