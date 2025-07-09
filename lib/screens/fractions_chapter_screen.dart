@@ -2,9 +2,34 @@ import 'package:flutter/material.dart';
 import 'fractions_screen.dart';
 import 'dart:developer' as developer;
 import 'package:flutter/services.dart';
+import '../services/shared_preference_service.dart';
 
-class FractionsChapterScreen extends StatelessWidget {
+class FractionsChapterScreen extends StatefulWidget {
   const FractionsChapterScreen({super.key});
+
+  @override
+  State<FractionsChapterScreen> createState() => _FractionsChapterScreenState();
+}
+
+class _FractionsChapterScreenState extends State<FractionsChapterScreen> {
+  double _score = 0.0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScore();
+  }
+
+  Future<void> _loadScore() async {
+    await SharedPreferenceService.initialize();
+    if (mounted) {
+      setState(() {
+        _score = SharedPreferenceService.getGamePercentage('fractions');
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +113,7 @@ class FractionsChapterScreen extends StatelessWidget {
                     ),
                   );
                 },
+                showScore: false,
               ),
               const SizedBox(height: 20),
               _buildModeCard(
@@ -95,15 +121,18 @@ class FractionsChapterScreen extends StatelessWidget {
                 'Practice Game',
                 Icons.videogame_asset,
                 'Fun games to test your knowledge',
-                () {
-                  Navigator.push(
+                () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const FractionsScreen(isGameMode: true),
                       fullscreenDialog: true,
                     ),
                   );
+                  // Reload score when returning from game
+                  _loadScore();
                 },
+                showScore: true,
               ),
               const Spacer(),
               Opacity(
@@ -126,8 +155,9 @@ class FractionsChapterScreen extends StatelessWidget {
     String title,
     IconData icon,
     String subtitle,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    bool showScore = false,
+  }) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -171,6 +201,24 @@ class FractionsChapterScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (showScore && !_isLoading) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _score >= 50 ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${_score.toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      color: _score >= 50 ? Colors.green : Colors.orange,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               const Icon(Icons.arrow_forward_ios, color: Color(0xFF7B2FF2), size: 18),
             ],
           ),

@@ -93,35 +93,45 @@ class _Measures2ScreenState extends State<Measures2Screen> with TickerProviderSt
         'image1': 'assets/images/measures/dumbbell_feather.svg',
         'image2': 'assets/images/measures/dumbbell_feather.svg',
         'options': _shuffleOptions(['DUMBBELL', 'FEATHER'], 'DUMBBELL'),
-        'correctAnswer': 'DUMBBELL'
+        'correctAnswer': 'DUMBBELL',
+        'leftLabel': 'DUMBBELL',
+        'rightLabel': 'FEATHER'
       },
       {
         'question': 'Which container can hold more liquid?',
         'image1': 'assets/images/measures/jug_cup.svg',
         'image2': 'assets/images/measures/jug_cup.svg',
         'options': _shuffleOptions(['JUG', 'CUP'], 'JUG'),
-        'correctAnswer': 'JUG'
+        'correctAnswer': 'JUG',
+        'leftLabel': 'JUG',
+        'rightLabel': 'CUP'
       },
       {
         'question': 'Which fruit is heavier?',
         'image1': 'assets/images/measures/watermelon_apple.svg',
         'image2': 'assets/images/measures/watermelon_apple.svg',
         'options': _shuffleOptions(['WATERMELON', 'APPLE'], 'WATERMELON'),
-        'correctAnswer': 'WATERMELON'
+        'correctAnswer': 'WATERMELON',
+        'leftLabel': 'WATERMELON',
+        'rightLabel': 'APPLE'
       },
       {
         'question': 'Which bottle has more capacity?',
         'image1': 'assets/images/measures/bottle_comparison.svg',
         'image2': 'assets/images/measures/bottle_comparison.svg',
         'options': _shuffleOptions(['1L BOTTLE', '500ML BOTTLE'], '1L BOTTLE'),
-        'correctAnswer': '1L BOTTLE'
+        'correctAnswer': '1L BOTTLE',
+        'leftLabel': '1L BOTTLE',
+        'rightLabel': '500ML BOTTLE'
       },
       {
         'question': 'Which object is heavier?',
         'image1': 'assets/images/measures/books_pencil.svg',
         'image2': 'assets/images/measures/books_pencil.svg',
         'options': _shuffleOptions(['BOOKS', 'PENCIL'], 'BOOKS'),
-        'correctAnswer': 'BOOKS'
+        'correctAnswer': 'BOOKS',
+        'leftLabel': 'BOOKS',
+        'rightLabel': 'PENCIL'
       },
     ];
 
@@ -645,7 +655,10 @@ class _Measures2ScreenState extends State<Measures2Screen> with TickerProviderSt
           const SizedBox(height: 32),
           _buildComparisonRow(
             practiceQuestions[currentQuestion]['image1'],
-            practiceQuestions[currentQuestion]['options'],
+            [
+              practiceQuestions[currentQuestion]['leftLabel'],
+              practiceQuestions[currentQuestion]['rightLabel']
+            ],
             size: 120,
           ),
           const SizedBox(height: 32),

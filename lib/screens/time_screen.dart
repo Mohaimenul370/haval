@@ -1,9 +1,11 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:math';
 import '../main.dart';
 import '../services/shared_preference_service.dart';
 import 'home_screen.dart';
+import 'package:flutter/foundation.dart';
 
 // Game types enum
 enum GameType {
@@ -247,139 +249,125 @@ class _TimeScreenState extends State<TimeScreen> with TickerProviderStateMixin {
     });
   }
 
+  void _checkAnswer(String selectedOption) {
+    final isCorrect = selectedOption == gameQuestions[currentQuestion]['correctAnswer'];
+    
+    setState(() {
+      selectedAnswer = selectedOption;
+      _showingFeedback = true;
+      _isCorrectAnswer = isCorrect;
+      
+      if (isCorrect) {
+        score++;
+        _answerAnimationController.forward().then((_) {
+          _answerAnimationController.reverse();
+        });
+        flutterTts.speak('Correct!');
+      } else {
+        flutterTts.speak('Try again!');
+      }
+    });
+
+    // Add animation and feedback delay before moving to next question
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        setState(() {
+          _showingFeedback = false;
+        });
+        
+        if (currentQuestion < gameQuestions.length - 1) {
+          setState(() {
+            currentQuestion++;
+            selectedAnswer = null;
+            _shuffleGameOptions(); // Shuffle options for the new question
+          });
+        } else {
+          // Save progress immediately when game is complete
+          developer.log('Time screen completed. Saving progress...');
+          developer.log('Score: $score out of ${gameQuestions.length}');
+          
+          SharedPreferenceService.saveGameProgress('time', score, gameQuestions.length).then((_) {
+            developer.log('Time screen progress saved successfully');
+            // Show game complete dialog
+            _showGameCompleteDialog();
+          });
+        }
+      }
+    });
+  }
+
   void _showGameCompleteDialog() {
-    final screenSize = MediaQuery.of(context).size;
+    final percentage = (score / gameQuestions.length) * 100;
+    final isPassed = percentage >= 50.0;
+    
+    developer.log('Showing game completion dialog');
+    developer.log('Final percentage: $percentage%');
+    developer.log('Passed: $isPassed');
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Container(
-          width: screenSize.width * 0.85,
-          constraints: BoxConstraints(
-            maxHeight: screenSize.height * 0.7,
-          ),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Title with star
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        score >= 3 ? Icons.star : Icons.star_border,
-                        color: Colors.amber,
-                        size: 32,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Game Complete!',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  // Score section
-                  Text(
-                    'Your Score',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$score out of 5',
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.purple,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Feedback message
-                  Text(
-                    score >= 4 ? 'Excellent work! 🌟' :
-                    score >= 3 ? 'Good job! 👍' :
-                    'Keep practicing! 💪',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
-                  // Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey[200],
-                            foregroundColor: Colors.black87,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const HomeScreen(),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            'Back',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF7B2FF2),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            _startGame();
-                          },
-                          child: const Text(
-                            'Play Again',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Text(
+            isPassed ? 'Congratulations!' : 'Keep Practicing!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: isPassed ? Colors.green : Colors.orange,
             ),
           ),
-        ),
-      ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isPassed ? Icons.emoji_events : Icons.school,
+                size: 64,
+                color: isPassed ? Colors.green : Colors.orange,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Score: $score/${gameQuestions.length}\n(${percentage.toStringAsFixed(1)}%)',
+                style: const TextStyle(fontSize: 20),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isPassed
+                  ? 'Great job! You\'ve mastered this chapter!'
+                  : 'Almost there! Try again to score at least 50%.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Continue'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Return to previous screen
+              },
+            ),
+            if (!isPassed)
+              TextButton(
+                child: const Text('Try Again'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  setState(() {
+                    score = 0;
+                    currentQuestion = 0;
+                    selectedAnswer = null;
+                    _showingFeedback = false;
+                    _shuffleGameOptions();
+                  });
+                },
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -467,12 +455,7 @@ class _TimeScreenState extends State<TimeScreen> with TickerProviderStateMixin {
   Widget _buildGameModeScreen() {
     return WillPopScope(
       onWillPop: () async {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const HomeScreen(),
-          ),
-        );
+        Navigator.pushReplacementNamed(context, '/time');
         return false;
       },
       child: Scaffold(
@@ -491,12 +474,7 @@ class _TimeScreenState extends State<TimeScreen> with TickerProviderStateMixin {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const HomeScreen(),
-                ),
-              );
+              Navigator.pushReplacementNamed(context, '/time');
             },
           ),
           actions: [
@@ -516,58 +494,50 @@ class _TimeScreenState extends State<TimeScreen> with TickerProviderStateMixin {
           ],
         ),
         body: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  gameQuestions[currentQuestion]['question'] as String,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.purple,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Container(
-                                height: 160,
-                                width: double.infinity,
-                                child: Center(
-                                  child: gameQuestions[currentQuestion]['image'] as Widget,
-                                ),
-                              ),
-                            ],
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            gameQuestions[currentQuestion]['question'] as String,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.purple,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                        ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            height: 200, // Increased height to prevent overflow
+                            child: Center(
+                              child: gameQuestions[currentQuestion]['image'] as Widget,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      ...(_getShuffledOptions()).map((option) {
-                        return _buildAnswerOption(option);
-                      }).toList(),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  ..._getShuffledOptions().map((option) {
+                    return _buildAnswerOption(option);
+                  }).toList(),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -576,48 +546,6 @@ class _TimeScreenState extends State<TimeScreen> with TickerProviderStateMixin {
 
   List<String> _getShuffledOptions() {
     return _shuffledOptions;
-  }
-
-  void _checkAnswer(String selectedOption) {
-    final isCorrect = selectedOption == gameQuestions[currentQuestion]['correctAnswer'];
-    
-    setState(() {
-      selectedAnswer = selectedOption;
-      _showingFeedback = true;
-      _isCorrectAnswer = isCorrect;
-      
-      if (isCorrect) {
-        score++;
-        _answerAnimationController.forward().then((_) {
-          _answerAnimationController.reverse();
-        });
-        flutterTts.speak('Correct!');
-      } else {
-        flutterTts.speak('Try again!');
-      }
-    });
-
-    // Add animation and feedback delay before moving to next question
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) {
-        setState(() {
-          _showingFeedback = false;
-        });
-        
-        if (currentQuestion < gameQuestions.length - 1) {
-          setState(() {
-            currentQuestion++;
-            selectedAnswer = null;
-            _shuffleGameOptions(); // Shuffle options for the new question
-          });
-        } else {
-          // Save progress immediately when game is complete
-          SharedPreferenceService.saveGameProgress('time', score, gameQuestions.length);
-          // Show game complete dialog
-          _showGameCompleteDialog();
-        }
-      }
-    });
   }
 
   Widget _buildAnswerOption(String option) {
@@ -721,21 +649,26 @@ class _TimeScreenState extends State<TimeScreen> with TickerProviderStateMixin {
         children: [
           const Text('Days of the Week', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            alignment: WrapAlignment.center,
-            children: [
-              'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
-            ].map((day) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.purple),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 150),
+            child: SingleChildScrollView(
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: [
+                  'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
+                ].map((day) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.purple),
+                  ),
+                  child: Text(day, style: const TextStyle(fontSize: 16)),
+                )).toList(),
               ),
-              child: Text(day, style: const TextStyle(fontSize: 16)),
-            )).toList(),
+            ),
           ),
         ],
       ),

@@ -521,9 +521,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> with TickerProvider
     return WillPopScope(
       onWillPop: () async {
         if (isGameMode) {
-          setState(() {
-            isGameMode = false;
-          });
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/analysis',
+            (route) => route.isFirst || route.settings.name == '/main_menu',
+          );
           return false;
         }
         return true;
@@ -535,9 +536,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> with TickerProvider
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
               if (isGameMode) {
-                setState(() {
-                  isGameMode = false;
-                });
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/analysis',
+                  (route) => route.isFirst || route.settings.name == '/main_menu',
+                );
               } else {
                 Navigator.of(context).pop();
               }

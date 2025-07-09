@@ -2,32 +2,54 @@ import 'package:flutter/material.dart';
 import 'fractions_2_screen.dart';
 import 'dart:developer' as developer;
 import 'package:flutter/services.dart';
+import '../services/shared_preference_service.dart';
 
-class Fractions2ChapterScreen extends StatelessWidget {
+class Fractions2ChapterScreen extends StatefulWidget {
   const Fractions2ChapterScreen({super.key});
 
-  void _navigateToScreen(BuildContext context, String routeName) {
+  @override
+  State<Fractions2ChapterScreen> createState() => _Fractions2ChapterScreenState();
+}
+
+class _Fractions2ChapterScreenState extends State<Fractions2ChapterScreen> {
+  double _score = 0.0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScore();
+  }
+
+  Future<void> _loadScore() async {
+    await SharedPreferenceService.initialize();
+    if (mounted) {
+      setState(() {
+        _score = SharedPreferenceService.getGamePercentage('fractions_2');
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _navigateToScreen(BuildContext context, String routeName) async {
     try {
       developer.log('Navigating to $routeName');
-      Navigator.pushNamed(context, routeName).then((_) {
-        developer.log('Navigation completed for $routeName');
-      }).catchError((error) {
-        developer.log('Navigation error: $error');
+      await Navigator.pushNamed(context, routeName);
+      developer.log('Navigation completed for $routeName');
+      // Reload score after returning from game
+      if (routeName == '/fractions_2_game') {
+        _loadScore();
+      }
+    } catch (e) {
+      developer.log('Navigation exception: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error navigating to $routeName'),
+          const SnackBar(
+            content: Text('An error occurred while navigating'),
             backgroundColor: Colors.red,
           ),
         );
-      });
-    } catch (e) {
-      developer.log('Navigation exception: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('An error occurred while navigating'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      }
     }
   }
 
@@ -102,6 +124,7 @@ class Fractions2ChapterScreen extends StatelessWidget {
                 Icons.menu_book,
                 'Interactive lessons and tutorials',
                 () => _navigateToScreen(context, '/fractions_2_learn'),
+                showScore: false,
               ),
               const SizedBox(height: 20),
               _buildModeCard(
@@ -110,6 +133,7 @@ class Fractions2ChapterScreen extends StatelessWidget {
                 Icons.videogame_asset,
                 'Fun games to test your knowledge',
                 () => _navigateToScreen(context, '/fractions_2_game'),
+                showScore: true,
               ),
               const Spacer(),
               Opacity(
@@ -132,8 +156,9 @@ class Fractions2ChapterScreen extends StatelessWidget {
     String title,
     IconData icon,
     String subtitle,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    bool showScore = false,
+  }) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -177,6 +202,24 @@ class Fractions2ChapterScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (showScore && !_isLoading) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _score >= 50 ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${_score.toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      color: _score >= 50 ? Colors.green : Colors.orange,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               const Icon(Icons.arrow_forward_ios, color: Color(0xFF7B2FF2), size: 18),
             ],
           ),

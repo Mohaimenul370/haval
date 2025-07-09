@@ -1,7 +1,30 @@
 import 'package:flutter/material.dart';
+import '../services/shared_preference_service.dart';
 
-class PositionPatterns2ChapterScreen extends StatelessWidget {
+class PositionPatterns2ChapterScreen extends StatefulWidget {
   const PositionPatterns2ChapterScreen({super.key});
+
+  @override
+  State<PositionPatterns2ChapterScreen> createState() => _PositionPatterns2ChapterScreenState();
+}
+
+class _PositionPatterns2ChapterScreenState extends State<PositionPatterns2ChapterScreen> {
+  double? score;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScore();
+  }
+
+  Future<void> _loadScore() async {
+    await SharedPreferenceService.initialize();
+    setState(() {
+      score = SharedPreferenceService.getGamePercentage('position_patterns_2');
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +101,11 @@ class PositionPatterns2ChapterScreen extends StatelessWidget {
                 'Practice Game',
                 Icons.videogame_asset,
                 'Fun games to test your knowledge',
-                () => Navigator.pushNamed(context, '/position_patterns_2/game'),
+                () async {
+                  await Navigator.pushNamed(context, '/position_patterns_2/game');
+                  _loadScore();
+                },
+                showScore: true,
               ),
               const Spacer(),
               Opacity(
@@ -101,8 +128,9 @@ class PositionPatterns2ChapterScreen extends StatelessWidget {
     String title,
     IconData icon,
     String subtitle,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    bool showScore = false,
+  }) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -146,6 +174,23 @@ class PositionPatterns2ChapterScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (showScore && !isLoading) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7B2FF2).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${(score ?? 0).toStringAsFixed(0)}%',
+                    style: const TextStyle(
+                      color: Color(0xFF7B2FF2),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               const Icon(Icons.arrow_forward_ios, color: Color(0xFF7B2FF2), size: 18),
             ],
           ),

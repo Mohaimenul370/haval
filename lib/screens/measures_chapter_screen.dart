@@ -2,9 +2,32 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'measures_screen.dart';
 import '../main.dart';
+import '../services/shared_preference_service.dart';
 
-class MeasuresChapterScreen extends StatelessWidget {
+class MeasuresChapterScreen extends StatefulWidget {
   const MeasuresChapterScreen({super.key});
+
+  @override
+  State<MeasuresChapterScreen> createState() => _MeasuresChapterScreenState();
+}
+
+class _MeasuresChapterScreenState extends State<MeasuresChapterScreen> {
+  double? score;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScore();
+  }
+
+  Future<void> _loadScore() async {
+    await SharedPreferenceService.initialize();
+    setState(() {
+      score = SharedPreferenceService.getGamePercentage('measures');
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +111,11 @@ class MeasuresChapterScreen extends StatelessWidget {
                 'Practice Game',
                 Icons.videogame_asset,
                 'Fun games to test your knowledge',
-                () => Navigator.pushNamed(context, '/measures_game'),
+                () async {
+                  await Navigator.pushNamed(context, '/measures_game');
+                  _loadScore();
+                },
+                showScore: true,
               ),
               const Spacer(),
               Opacity(
@@ -111,8 +138,9 @@ class MeasuresChapterScreen extends StatelessWidget {
     String title,
     IconData icon,
     String subtitle,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    bool showScore = false,
+  }) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -156,6 +184,23 @@ class MeasuresChapterScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (showScore && !isLoading) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7B2FF2).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${(score ?? 0).toStringAsFixed(0)}%',
+                    style: const TextStyle(
+                      color: Color(0xFF7B2FF2),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               const Icon(Icons.arrow_forward_ios, color: Color(0xFF7B2FF2), size: 18),
             ],
           ),

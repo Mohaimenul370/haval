@@ -3,7 +3,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:kg_education_app/services/game_progress_service.dart';
 import 'package:kg_education_app/services/shared_preference_service.dart';
-import 'package:kg_education_app/widgets/lock_message_dialog.dart';
 import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 

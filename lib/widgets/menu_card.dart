@@ -5,6 +5,7 @@ class MenuCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final bool isLocked;
 
   const MenuCard({
     super.key,
@@ -12,6 +13,7 @@ class MenuCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onTap,
+    this.isLocked = false,
   });
 
   @override
@@ -23,34 +25,63 @@ class MenuCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Ink(
           decoration: BoxDecoration(
-            color: color,
+            color: isLocked ? Colors.grey : color,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.3),
+                color: (isLocked ? Colors.grey : color).withOpacity(0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Stack(
             children: [
-              Icon(
-                icon,
-                color: Colors.white,
-                size: 40,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      icon,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
+              if (isLocked)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.lock,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

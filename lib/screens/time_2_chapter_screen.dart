@@ -1,9 +1,35 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import '../main.dart';
+import '../services/shared_preference_service.dart';
 
-class Time2ChapterScreen extends StatelessWidget {
+class Time2ChapterScreen extends StatefulWidget {
   const Time2ChapterScreen({super.key});
+
+  @override
+  State<Time2ChapterScreen> createState() => _Time2ChapterScreenState();
+}
+
+class _Time2ChapterScreenState extends State<Time2ChapterScreen> {
+  double _score = 0.0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScore();
+  }
+
+  Future<void> _loadScore() async {
+    await SharedPreferenceService.initialize();
+    final score = SharedPreferenceService.getGamePercentage('time_2');
+    if (mounted) {
+      setState(() {
+        _score = score / 100; // Convert percentage to decimal
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +107,9 @@ class Time2ChapterScreen extends StatelessWidget {
                 'Practice Game',
                 Icons.videogame_asset,
                 'Fun games to test your knowledge',
-                () => Navigator.pushNamed(context, '/time_2/game'),
+                () {
+                  Navigator.pushNamed(context, '/time_2/game').then((_) => _loadScore());
+                },
               ),
               const Spacer(),
               Opacity(
@@ -149,6 +177,24 @@ class Time2ChapterScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (title == 'Practice Game' && !_isLoading) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7B2FF2).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${(_score * 100).toInt()}%',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF7B2FF2),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               const Icon(Icons.arrow_forward_ios, color: Color(0xFF7B2FF2), size: 18),
             ],
           ),

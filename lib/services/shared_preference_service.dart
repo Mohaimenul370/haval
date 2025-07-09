@@ -50,8 +50,13 @@ class SharedPreferenceService {
     developer.log('Is completed: $isCompleted');
     
     // Save all relevant data
-    await setGamePercentage(gameId, percentage);
-    await setGameCompleted(gameId, isCompleted);
+    await Future.wait([
+      setGamePercentage(gameId, percentage),
+      setGameCompleted(gameId, isCompleted),
+    ]);
+    
+    // Force immediate progress update
+    await _updateOverallProgress();
     
     return true;
   }
@@ -441,35 +446,24 @@ class SharedPreferenceService {
 
   // Update overall progress based on chapter completion
   static Future<void> _updateOverallProgress() async {
-    if (_prefs == null) return;
-
-    final keys = _prefs!.getKeys();
-    int totalChapters = 0;
+    if (!_isInitialized) await initialize();
+    
     int completedChapters = 0;
-
-    // Count completed chapters (score >= 50% or marked as completed)
-    for (var key in keys) {
-      if (key.endsWith('_score') && !key.startsWith('math_play')) {
-        totalChapters++;
-        final score = _prefs!.getDouble(key) ?? 0.0;
-        final route = key.replaceAll('_score', '');
-        final completed = _prefs!.getBool('${route}_completed') ?? false;
-        
-        if (score >= 50.0 || completed) {
-          completedChapters++;
-        }
+    for (var chapter in allChapters) {
+      if (isGameCompleted(chapter)) {
+        completedChapters++;
       }
     }
-
-    // Calculate and save overall progress
-    if (totalChapters > 0) {
-      final progress = (completedChapters / 15) * 100; // 15 total chapters excluding Math Play
-      await _prefs!.setDouble(_mathPlayKey, progress);
-    }
+    
+    final overallProgress = (completedChapters / allChapters.length) * 100;
+    await _prefs!.setDouble(_mathPlayKey, overallProgress);
+    developer.log('Overall progress updated: $overallProgress%');
   }
 
   // Get overall progress
   static double getOverallProgress() {
-    return _prefs?.getDouble(_mathPlayKey) ?? 0.0;
+    final progress = _prefs?.getDouble(_mathPlayKey) ?? 0.0;
+    final roundedProgress = double.parse(progress.toStringAsFixed(2)); // Round to 2 decimal places
+    return roundedProgress; // No need to clamp here as it's already handled in _updateOverallProgress
   }
 } 

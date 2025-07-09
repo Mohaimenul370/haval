@@ -485,15 +485,43 @@ class _ShapesScreenState extends State<ShapesScreen> with SingleTickerProviderSt
   Widget _buildGameMode() {
     return Column(
       children: [
-        // Question number indicator
+        // Score and Question number indicator
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Text(
-            'Question ${currentQuestion + 1} of ${questions.length}',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Score display
+              Text(
+                'Score: $score',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.purple,
+                ),
+              ),
+              // Question counter
+              Text(
+                'Question ${currentQuestion + 1}/${questions.length}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Progress bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: (currentQuestion + 1) / questions.length,
+              backgroundColor: Colors.grey[200],
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+              minHeight: 8,
             ),
           ),
         ),

@@ -1,17 +1,43 @@
 import 'package:flutter/material.dart';
 import '../widgets/global_app_bar.dart';
 import 'numbers_to_10_screen.dart';
+import '../services/shared_preference_service.dart';
 
-class NumbersTo10ChapterScreen extends StatelessWidget {
+class NumbersTo10ChapterScreen extends StatefulWidget {
   const NumbersTo10ChapterScreen({super.key});
+
+  @override
+  State<NumbersTo10ChapterScreen> createState() => _NumbersTo10ChapterScreenState();
+}
+
+class _NumbersTo10ChapterScreenState extends State<NumbersTo10ChapterScreen> {
+  double _score = 0.0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScore();
+  }
+
+  Future<void> _loadScore() async {
+    await SharedPreferenceService.initialize();
+    if (mounted) {
+      setState(() {
+        _score = SharedPreferenceService.getGamePercentage('numbers_to_10');
+        _isLoading = false;
+      });
+    }
+  }
 
   Widget _buildModeCard(
     BuildContext context,
     String title,
     IconData icon,
     String description,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    bool showScore = false,
+  }) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -25,10 +51,33 @@ class NumbersTo10ChapterScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 48,
-                color: const Color(0xFF7B2FF2),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 48,
+                    color: const Color(0xFF7B2FF2),
+                  ),
+                  if (showScore && !_isLoading) ...[
+                    const SizedBox(width: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _score >= 50 ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        '${_score.toStringAsFixed(0)}%',
+                        style: TextStyle(
+                          color: _score >= 50 ? Colors.green : Colors.orange,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 16),
               Text(
@@ -95,6 +144,7 @@ class NumbersTo10ChapterScreen extends StatelessWidget {
                   fullscreenDialog: true,
                 ),
               ),
+              showScore: false,
             ),
             const SizedBox(height: 20),
             _buildModeCard(
@@ -102,13 +152,18 @@ class NumbersTo10ChapterScreen extends StatelessWidget {
               'Practice Game',
               Icons.videogame_asset,
               'Fun games to test your knowledge',
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NumbersTo10Screen(isGameMode: true),
-                  fullscreenDialog: true,
-                ),
-              ),
+              () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NumbersTo10Screen(isGameMode: true),
+                    fullscreenDialog: true,
+                  ),
+                );
+                // Reload score after returning from game
+                _loadScore();
+              },
+              showScore: true,
             ),
           ],
         ),

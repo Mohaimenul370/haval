@@ -1,9 +1,35 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import '../main.dart';
+import '../services/shared_preference_service.dart';
 
-class TimeChapterScreen extends StatelessWidget {
+class TimeChapterScreen extends StatefulWidget {
   const TimeChapterScreen({super.key});
+
+  @override
+  State<TimeChapterScreen> createState() => _TimeChapterScreenState();
+}
+
+class _TimeChapterScreenState extends State<TimeChapterScreen> {
+  double _score = 0.0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScore();
+  }
+
+  Future<void> _loadScore() async {
+    await SharedPreferenceService.initialize();
+    final score = SharedPreferenceService.getGamePercentage('time');
+    if (mounted) {
+      setState(() {
+        _score = score / 100; // Convert percentage to decimal
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +123,9 @@ class TimeChapterScreen extends StatelessWidget {
                   'Practice Game',
                   Icons.videogame_asset,
                   'Fun games to test your knowledge',
-                  () => Navigator.pushNamed(context, '/time_game'),
+                  () {
+                    Navigator.pushNamed(context, '/time_game').then((_) => _loadScore());
+                  },
                 ),
                 const Spacer(),
                 Opacity(
@@ -166,6 +194,24 @@ class TimeChapterScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (title == 'Practice Game' && !_isLoading) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7B2FF2).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${(_score * 100).toInt()}%',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF7B2FF2),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               const Icon(Icons.arrow_forward_ios, color: Color(0xFF7B2FF2), size: 18),
             ],
           ),

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../widgets/menu_card.dart';
 import '../services/shared_preference_service.dart';
 import '../services/game_progress_service.dart';
-import '../widgets/lock_message_dialog.dart';
 import '../widgets/global_app_bar.dart';
 import 'dart:developer' as developer;
 import 'play_screen.dart';
@@ -30,19 +29,19 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'title': 'Numbers to 10',
-      'icon': Icons.filter_1,
+      'icon': Icons.looks_one,
       'route': '/numbers_to_10',
       'color': Color(0xFF2196F3), // Blue
     },
     {
       'title': 'Number 20',
-      'icon': Icons.remove,
+      'icon': Icons.looks_two,
       'route': '/numbers_to_20',
       'color': Color(0xFF2196F3), // Blue
     },
     {
       'title': 'Shapes',
-      'icon': Icons.menu,
+      'icon': Icons.category,
       'route': '/shapes',
       'color': Color(0xFFFF9800), // Orange
     },
@@ -60,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'title': 'Geometry',
-      'icon': Icons.change_history,
+      'icon': Icons.architecture,
       'route': '/geometry',
       'color': Color(0xFF2196F3), // Blue
     },
@@ -72,26 +71,26 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'title': 'Measures',
-      'icon': Icons.linear_scale,
+      'icon': Icons.straighten,
       'route': '/measures',
       'color': Color(0xFF9C27B0), // Purple
     },
     {
       'title': 'Measures 2',
-      'icon': Icons.straighten,
+      'icon': Icons.square_foot,
       'route': '/measures_2',
       'color': Color(0xFF9C27B0), // Purple
     },
     {
       'title': 'Positions',
-      'icon': Icons.grid_on,
+      'icon': Icons.gps_fixed,
       'route': '/positions',
       'color': Color(0xFFFF9800), // Orange
     },
     {
       'title': 'Statistics',
       'icon': Icons.bar_chart,
-      'route': '/statistics',
+      'route': '/analysis',
       'color': Color(0xFF4CAF50), // Green
     },
     {
@@ -114,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'title': 'Position Patterns 2',
-      'icon': Icons.grid_goldenratio,
+      'icon': Icons.grid_4x4,
       'route': '/position_patterns_2',
       'color': Color(0xFFFF9800), // Orange
     },
@@ -123,37 +122,94 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadGameScores();
+    _loadProgress();
   }
 
-  Future<void> _loadGameScores() async {
-    await SharedPreferenceService.initialize();
-    setState(() {
-      _gameScores.clear();
-      _gameCompleted.clear();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload progress when returning to this screen
+    _loadProgress();
+  }
 
+  Future<void> _loadProgress() async {
+    developer.log('Loading progress in home screen...');
+    
+    setState(() {
       // Load scores for each chapter
       for (var chapter in chapters) {
-        final route = chapter['route'].toString().substring(1);
+        var route = chapter['route'].toString().substring(1);
+        // Map 'analysis' to 'statistics' for consistency
+        if (route == 'analysis') {
+          route = 'statistics';
+        }
         final score = SharedPreferenceService.getGamePercentage(route);
         final completed = SharedPreferenceService.isGameCompleted(route);
         _gameScores[route] = score;
         _gameCompleted[route] = completed;
+        
+        developer.log('Chapter $route - Score: $score, Completed: $completed');
       }
 
       // Get overall progress
       _progressValue = SharedPreferenceService.getOverallProgress();
+      developer.log('Overall progress loaded: $_progressValue%');
+      
+      // Count completed chapters to verify progress
+      int completedChapters = 0;
+      for (var entry in _gameScores.entries) {
+        if (entry.value >= 50.0 || (_gameCompleted[entry.key] ?? false)) {
+          completedChapters++;
+          developer.log('Chapter ${entry.key} is completed (score: ${entry.value}%)');
+        } else {
+          developer.log('Chapter ${entry.key} is not completed (score: ${entry.value}%)');
+        }
+      }
+      
+      // Calculate expected progress
+      final expectedProgress = (completedChapters / (chapters.length - 1)) * 100; // -1 for Math Play
+      developer.log('Expected progress based on completed chapters: $expectedProgress%');
+      
+      // Update progress if it doesn't match expected
+      if (expectedProgress >= 100 && _progressValue < 100) {
+        _progressValue = 100;
+        developer.log('All chapters completed, setting progress to 100%');
+      } else if (expectedProgress < 100 && _progressValue >= 100) {
+        _progressValue = expectedProgress;
+        developer.log('Not all chapters completed, adjusting progress to: $_progressValue%');
+      }
+      
       _canAccessMathPlay = _progressValue >= 100;
+      developer.log('Math play access: $_canAccessMathPlay');
     });
   }
 
   void _showLockMessage(BuildContext context) {
-    showLockMessageDialog(
-      context,
-      _progressValue,
-      _gameScores,
-      _gameCompleted,
-      isFromMathPlay: false,
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Unlock Math Play',
+            style: TextStyle(
+              color: Color(0xFF9C27B0),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Prove your knowledge! Score at least 50% in all 15 chapters to unlock the exclusive special chapter.',
+            style: TextStyle(
+              fontSize: 16,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('CLOSE'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -300,15 +356,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 itemCount: chapters.length,
                 itemBuilder: (context, index) {
                   final chapter = chapters[index];
+                  final isMathPlay = chapter['title'] == 'Math Play';
                   return MenuCard(
                     title: chapter['title'],
                     icon: chapter['icon'],
                     color: chapter['color'],
                     onTap: () async {
-                      await Navigator.pushNamed(context, chapter['route']);
-                      // Reload scores when returning from chapter
-                      _loadGameScores();
+                      if (isMathPlay) {
+                        Navigator.pushNamed(context, '/play');
+                      } else {
+                        await Navigator.pushNamed(context, chapter['route']);
+                        // Reload scores when returning from chapter
+                        _loadProgress();
+                      }
                     },
+                    isLocked: isMathPlay && !_canAccessMathPlay,
                   );
                 },
               ),

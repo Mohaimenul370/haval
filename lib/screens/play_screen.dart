@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../services/game_progress_service.dart';
 import '../services/shared_preference_service.dart';
-import '../widgets/lock_message_dialog.dart';
+import '../widgets/global_app_bar.dart';
+import 'dart:math';
 
 class MathProblem {
   final String question;
@@ -60,9 +61,9 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
     ),
     MathProblem(
       question: 'What time is shown on the clock?',
-      visual: _buildClockVisual(3, 0),
+      visual: _buildClockVisual(6, 0),  // Changed to 6 o'clock
       options: ['2:00', '3:00', '4:00', '5:00', '6:00'],
-      correctAnswer: '3:00',
+      correctAnswer: '6:00',  // Changed to 6:00
       category: 'Time',
     ),
     MathProblem(
@@ -138,35 +139,12 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
         shape: BoxShape.circle,
         border: Border.all(color: Colors.black, width: 2),
       ),
-      child: Stack(
-        children: [
-          Transform.rotate(
-            angle: (hour % 12 + minutes / 60) * (2 * 3.14159 / 12),
-            child: Container(
-              width: 2,
-              height: 40,
-              color: Colors.black,
-              alignment: Alignment.bottomCenter,
-            ),
-          ),
-          Transform.rotate(
-            angle: minutes * (2 * 3.14159 / 60),
-            child: Container(
-              width: 2,
-              height: 50,
-              color: Colors.black,
-              alignment: Alignment.bottomCenter,
-            ),
-          ),
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.black,
-            ),
-          ),
-        ],
+      child: CustomPaint(
+        painter: ClockPainter(
+          hourAngle: (hour % 12) * (2 * pi / 12) - pi / 2,
+          minuteAngle: minutes * (2 * pi / 60) - pi / 2,
+          color: Colors.black,
+        ),
       ),
     );
   }
@@ -269,7 +247,6 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
     super.initState();
     _initializeAnimations();
     _initializeTts();
-    // Show dialog immediately after screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadGameScores();
     });
@@ -334,50 +311,130 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
       _gameCompleted.clear();
 
       // Load scores for each chapter
-      for (var chapter in chapters) {
-        final route = chapter['route'].toString().substring(1);
-        final score = SharedPreferenceService.getGamePercentage(route);
-        final completed = SharedPreferenceService.isGameCompleted(route);
-        _gameScores[route] = score;
-        _gameCompleted[route] = completed;
+      for (var chapter in SharedPreferenceService.allChapters) {
+        final score = SharedPreferenceService.getGamePercentage(chapter);
+        final completed = SharedPreferenceService.isGameCompleted(chapter);
+        _gameScores[chapter] = score;
+        _gameCompleted[chapter] = completed;
       }
 
-      // Calculate Math Play percentage
-      int completedChapters = 0;
-      for (var entry in _gameScores.entries) {
-        if (_gameCompleted[entry.key] == true || entry.value >= 50.0) {
-          completedChapters++;
-        }
-      }
-      _mathPlayPercentage = (completedChapters / 15) * 100;
+      // Get overall progress directly from SharedPreferenceService
+      _mathPlayPercentage = SharedPreferenceService.getOverallProgress();
       _canStartPractice = _mathPlayPercentage >= 100;
       _isLoading = false;
     });
 
-    // Always show the dialog first, regardless of progress
-    if (!_hasShownDialog && mounted) {
+    if (_canStartPractice) {
+      // If progress is 100%, start the game directly
+      _startGame();
+    } else if (!_hasShownDialog && mounted) {
+      // Only show dialog if progress is less than 100%
       _hasShownDialog = true;
-      await showLockMessageDialog(
-        context,
-        _mathPlayPercentage,
-        _gameScores,
-        _gameCompleted,
-        isFromMathPlay: true,
-      );
+      await _showProgressDialog();
       
-      // After dialog is closed, handle navigation
-      if (mounted) {
-        if (!_canStartPractice) {
-          // If not enough progress, navigate back to previous screen
-          if (mounted) {
-            Navigator.of(context).pop();
-          }
-        } else {
-          // If enough progress, start the game
-          _startGame();
-        }
+      // After dialog is closed, navigate back if not enough progress
+      if (mounted && !_canStartPractice) {
+        Navigator.of(context).pop();
       }
     }
+  }
+
+  Future<void> _showProgressDialog() async {
+    if (!mounted) return;
+
+    // Show the dialog
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        // Create a list of chapters with their scores
+        final List<Widget> chapterScores = [];
+        for (var chapter in SharedPreferenceService.allChapters) {
+          final score = _gameScores[chapter] ?? 0.0;
+          final chapterName = chapter.toUpperCase().replaceAll('_', ' ');
+          chapterScores.add(
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      chapterName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${score.toStringAsFixed(1)}%',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.green,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: Color(0xFFFCE4EC), // Light pink background
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Math Play Locked',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Prove your knowledge! Score at least 50% in all the chapters to unlock the exclusive Math Play chapter.',
+                  style: TextStyle(
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Current progress: ${_mathPlayPercentage.toStringAsFixed(1)}%',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Your current progress:',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...chapterScores,
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _startGame() {
@@ -589,35 +646,11 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        // Just return true to allow normal back navigation
-        return true;
-      },
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: const Text(
-            'Math Practice',
-            style: TextStyle(color: Colors.black),
-          ),
-        ),
-        body: SafeArea(
-          child: _isLoading 
-            ? const Center(
-                child: CircularProgressIndicator(),
-              )
-            : _canStartPractice 
-              ? _buildGameContent() 
-              : const SizedBox(), // Hide content while dialog is showing
-        ),
-      ),
+    return Scaffold(
+      appBar: GlobalAppBar(title: 'Math Play'),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _buildGameContent(),
     );
   }
 
@@ -757,6 +790,80 @@ class _PlayScreenState extends State<PlayScreen> with TickerProviderStateMixin {
       ),
     );
   }
+}
+
+class ClockPainter extends CustomPainter {
+  final double hourAngle;
+  final double minuteAngle;
+  final Color color;
+  final bool isLarge;
+
+  ClockPainter({
+    required this.hourAngle,
+    required this.minuteAngle,
+    required this.color,
+    this.isLarge = false,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    
+    // Draw hour markers
+    final markerPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    for (int i = 0; i < 12; i++) {
+      final angle = i * (2 * pi / 12);
+      final markerRadius = radius * 0.85;
+      final x = center.dx + markerRadius * sin(angle);
+      final y = center.dy - markerRadius * cos(angle);
+      canvas.drawCircle(Offset(x, y), 2, markerPaint);
+    }
+
+    // Draw hour hand
+    final hourHandPaint = Paint()
+      ..color = color
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+
+    final hourHandLength = radius * 0.5;
+    canvas.drawLine(
+      center,
+      Offset(
+        center.dx + hourHandLength * cos(hourAngle),
+        center.dy + hourHandLength * sin(hourAngle),
+      ),
+      hourHandPaint,
+    );
+
+    // Draw minute hand
+    final minuteHandPaint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    final minuteHandLength = radius * 0.7;
+    canvas.drawLine(
+      center,
+      Offset(
+        center.dx + minuteHandLength * cos(minuteAngle),
+        center.dy + minuteHandLength * sin(minuteAngle),
+      ),
+      minuteHandPaint,
+    );
+
+    // Draw center dot
+    canvas.drawCircle(center, 4, markerPaint);
+  }
+
+  @override
+  bool shouldRepaint(ClockPainter oldDelegate) =>
+      oldDelegate.hourAngle != hourAngle ||
+      oldDelegate.minuteAngle != minuteAngle ||
+      oldDelegate.color != color;
 }
 
 final List<Map<String, dynamic>> chapters = [

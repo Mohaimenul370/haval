@@ -123,16 +123,27 @@ class _Fractions2ScreenState extends State<Fractions2Screen> with TickerProvider
     }
   }
 
-  void _showCompletionDialog() {
+  void _showCompletionDialog() async {
     final percentage = (score / shuffledQuestions.length) * 100;
     final isPassed = percentage >= 50.0;
     
-    // Save the game progress immediately without waiting
     if (isPassed) {
-      SharedPreferenceService.saveGameProgress('fractions_2', score, shuffledQuestions.length);
+      // Save progress and wait for it to complete
+      await SharedPreferenceService.saveGameProgress('fractions_2', score, shuffledQuestions.length);
+      
+      // Force an immediate update of the overall progress
+      await SharedPreferenceService.initialize();
+      final newProgress = SharedPreferenceService.getOverallProgress();
+      developer.log('Updated overall progress: $newProgress%');
+      
+      // Notify any listening widgets to rebuild
+      if (mounted) {
+        setState(() {});
+      }
     }
 
-    // Show dialog immediately without waiting for save to complete
+    // Only show dialog after save is complete
+    if (!mounted) return;
     _showDialog(percentage, isPassed);
   }
 
@@ -764,56 +775,12 @@ class _Fractions2ScreenState extends State<Fractions2Screen> with TickerProvider
             shape: BoxShape.circle,
             border: Border.all(color: Color(0xFF7B2FF2), width: 2),
           ),
-          child: Stack(
-            children: [
-              // Clock center
-              Center(
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: Color(0xFF7B2FF2),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-              // Hour markers
-              ...List.generate(12, (index) {
-                final angle = (index * 30) * 3.14159 / 180;
-                return Positioned(
-                  left: 60 + 50 * sin(angle) - 2,
-                  top: 60 - 50 * cos(angle) - 2,
-                  child: Container(
-                    width: 4,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Color(0xFF7B2FF2),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                );
-              }),
-              // Hour hand (pointing to 4)
-              Transform.rotate(
-                angle: 4 * 30 * 3.14159 / 180,
-                child: Container(
-                  width: 2,
-                  height: 30,
-                  color: Color(0xFF7B2FF2),
-                  margin: EdgeInsets.only(bottom: 30),
-                ),
-              ),
-              // Minute hand (pointing to 6)
-              Transform.rotate(
-                angle: 6 * 30 * 3.14159 / 180,
-                child: Container(
-                  width: 2,
-                  height: 45,
-                  color: Color(0xFF7B2FF2),
-                  margin: EdgeInsets.only(bottom: 45),
-                ),
-              ),
-            ],
+          child: CustomPaint(
+            painter: ClockPainter(
+              hourAngle: 2 * 30 * 3.14159 / 180 - 3.14159 / 2,  // 2 o'clock
+              minuteAngle: 6 * 30 * 3.14159 / 180 - 3.14159 / 2,  // 30 minutes
+              color: Color(0xFF7B2FF2),
+            ),
           ),
         ),
       ),
@@ -1040,52 +1007,13 @@ class _Fractions2ScreenState extends State<Fractions2Screen> with TickerProvider
             shape: BoxShape.circle,
             border: Border.all(color: Color(0xFF7B2FF2), width: 2),
           ),
-          child: Stack(
-            children: [
-              Center(
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: Color(0xFF7B2FF2),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-              ...List.generate(12, (index) {
-                final angle = (index * 30) * 3.14159 / 180;
-                return Positioned(
-                  left: 75 + 65 * sin(angle) - 2,
-                  top: 75 - 65 * cos(angle) - 2,
-                  child: Container(
-                    width: 4,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Color(0xFF7B2FF2),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                );
-              }),
-              Transform.rotate(
-                angle: 2 * 30 * 3.14159 / 180,
-                child: Container(
-                  width: 2,
-                  height: 40,
-                  color: Color(0xFF7B2FF2),
-                  margin: EdgeInsets.only(bottom: 40),
-                ),
-              ),
-              Transform.rotate(
-                angle: 6 * 30 * 3.14159 / 180,
-                child: Container(
-                  width: 2,
-                  height: 60,
-                  color: Color(0xFF7B2FF2),
-                  margin: EdgeInsets.only(bottom: 60),
-                ),
-              ),
-            ],
+          child: CustomPaint(
+            painter: ClockPainter(
+              hourAngle: 2 * 30 * 3.14159 / 180 - 3.14159 / 2,  // 2 o'clock
+              minuteAngle: 6 * 30 * 3.14159 / 180 - 3.14159 / 2,  // 30 minutes
+              color: Color(0xFF7B2FF2),
+              isLarge: true,
+            ),
           ),
         ),
       ),
@@ -1156,4 +1084,78 @@ class _Fractions2ScreenState extends State<Fractions2Screen> with TickerProvider
       answer: '9 apples',
     ),
   ];
+}
+
+class ClockPainter extends CustomPainter {
+  final double hourAngle;
+  final double minuteAngle;
+  final Color color;
+  final bool isLarge;
+
+  ClockPainter({
+    required this.hourAngle,
+    required this.minuteAngle,
+    required this.color,
+    this.isLarge = false,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    
+    // Draw hour markers
+    final markerPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    for (int i = 0; i < 12; i++) {
+      final angle = i * 30 * 3.14159 / 180;
+      final markerRadius = isLarge ? radius * 0.85 : radius * 0.8;
+      final x = center.dx + markerRadius * sin(angle);
+      final y = center.dy - markerRadius * cos(angle);
+      canvas.drawCircle(Offset(x, y), isLarge ? 2 : 1.5, markerPaint);
+    }
+
+    // Draw hour hand
+    final hourHandPaint = Paint()
+      ..color = color
+      ..strokeWidth = isLarge ? 4 : 3
+      ..strokeCap = StrokeCap.round;
+
+    final hourHandLength = isLarge ? radius * 0.5 : radius * 0.45;
+    canvas.drawLine(
+      center,
+      Offset(
+        center.dx + hourHandLength * cos(hourAngle),
+        center.dy + hourHandLength * sin(hourAngle),
+      ),
+      hourHandPaint,
+    );
+
+    // Draw minute hand
+    final minuteHandPaint = Paint()
+      ..color = color
+      ..strokeWidth = isLarge ? 2 : 1.5
+      ..strokeCap = StrokeCap.round;
+
+    final minuteHandLength = isLarge ? radius * 0.7 : radius * 0.65;
+    canvas.drawLine(
+      center,
+      Offset(
+        center.dx + minuteHandLength * cos(minuteAngle),
+        center.dy + minuteHandLength * sin(minuteAngle),
+      ),
+      minuteHandPaint,
+    );
+
+    // Draw center dot
+    canvas.drawCircle(center, isLarge ? 4 : 3, markerPaint);
+  }
+
+  @override
+  bool shouldRepaint(ClockPainter oldDelegate) =>
+      oldDelegate.hourAngle != hourAngle ||
+      oldDelegate.minuteAngle != minuteAngle ||
+      oldDelegate.color != color;
 }
